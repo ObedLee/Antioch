@@ -177,8 +177,10 @@ export default function Home() {
                   src={images.mainTitle}
                   alt="부모교사세미나" 
                   priority
-                  fill
+                  width={1000} 
+                  height={1000}
                   sizes="100vw"
+                  className={styles.mainTitle}
                 />
               </div>
             </div>
@@ -210,7 +212,7 @@ export default function Home() {
             >
               <div className={styles.subTitleBackground}>
                 <Image 
-                  src="/images/글자배경.png" 
+                  src={images.subTitleBg} 
                   alt=""
                   fill
                   className={styles.subTitleImage}
@@ -284,12 +286,21 @@ export default function Home() {
 
           {/* 강사 소개 섹션 */}
           <section className={styles.section} id="speaker-section">
-            <div className={styles.sectionHeader}>
+            <motion.div 
+              className={styles.sectionHeader}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ 
+                opacity: 1, 
+                y: 0,
+                transition: { duration: 0.6, ease: "easeOut" }
+              }}
+              viewport={{ once: true, margin: "-50px" }}
+            >
               <div className={styles.subTitleBackground}>
                 <Image src={images.subTitleBg} alt="" fill className={styles.subTitleImage} />
                 <span className={styles.subTitleText}>강사</span>
               </div>
-            </div>
+            </motion.div>
           
             <div className={styles.speakerContainer}>
               <motion.div 
@@ -459,13 +470,13 @@ export default function Home() {
               }}
               viewport={{ once: true }}
             >
-              <div className={styles.scheduleImage}>
+              <div className={styles.scheduleImageWrapper}>
                 <Image 
                   src={images.schedule}
                   alt="세미나 일정"
                   width={1000}
                   height={500}
-                  className={styles.schedule}
+                  className={styles.scheduleImage}
                 />
               </div>
             </motion.div>
@@ -497,7 +508,7 @@ export default function Home() {
             >
               <div className={styles.subTitleBackground}>
                 <Image 
-                  src="/images/글자배경.png" 
+                  src={images.subTitleBg} 
                   alt="" 
                   fill
                   className={styles.subTitleImage}
@@ -564,12 +575,12 @@ export default function Home() {
                 }}
                 viewport={{ once: true }}
               >
-                <div className={styles.mapImage}>
+                <div className={styles.mapImageWrapper}>
                   <Image 
-                    src={images.map}
+                    src={images.gmap}
                     alt="안디옥교회 위치"
                     fill
-                    className={styles.map}
+                    className={styles.mapImage}
                   />  
                 </div>
               </motion.div>
@@ -635,7 +646,7 @@ export default function Home() {
               >
                 <div className={styles.mapImageWrapper}>
                   <Image 
-                    src="/images/서울지도.png" 
+                    src={images.smap} 
                     alt="안디옥교회 위치"
                     fill
                     className={styles.mapImage}
@@ -672,7 +683,7 @@ export default function Home() {
             >
               <div className={styles.subTitleBackground}>
                 <Image 
-                  src="/images/글자배경2.png" 
+                  src={images.subTitleBg2}
                   alt="" 
                   fill
                   className={styles.subTitleImage}
@@ -790,7 +801,7 @@ export default function Home() {
             >
               <div className={styles.subTitleBackground}>
                 <Image 
-                  src="/images/글자배경2.png" 
+                  src={images.subTitleBg2} 
                   alt="" 
                   fill
                   className={styles.subTitleImage}
@@ -967,7 +978,7 @@ export default function Home() {
           className={styles.logoLink}
         >
           <Image 
-            src="/images/주최로고.png" 
+            src={images.logo2} 
             alt="안디옥교회" 
             width={240}
             height={80}
