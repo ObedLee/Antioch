@@ -3,8 +3,9 @@
   "homepage": "https://obedlee.github.io/Antioch/",
   "version": "0.1.0",
   "private": true,
-  "scripts" : {
-    "build": "next build && next export",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
     "predeploy": "npm run build",
     "deploy": "touch out/.nojekyll && gh-pages -d out --dotfiles"
   },
