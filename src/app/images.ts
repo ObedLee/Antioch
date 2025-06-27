@@ -1,15 +1,15 @@
-import BackgroundImage from '@/public/images/배경.png';
-import MainTitle from '@/public/images/메인제목.png';
-import SubTitleBg from '@/public/images/글자배경.png';
-import Speaker1 from '@/public/images/강사1.png';
-import Speaker2 from '@/public/images/강사2.png';
-import Speaker3 from '@/public/images/강사3.png';
-import MapImage from '@/public/images/구미지도.png';
-import LogoText from '@/public/images/글자로고.png';
-import ScheduleImage from '@/public/images/일정표.png';
-import LocationMark from '@/public/images/위치마크.png';
-import ExampleImage from '@/public/images/예시.png';
-import Logo from '@/public/images/로고.png';
+import BackgroundImage from '../../public/images/배경.png';
+import MainTitle from '../../public/images/메인제목.png';
+import SubTitleBg from '../../public/images/글자배경.png';
+import Speaker1 from '../../public/images/강사1.png';
+import Speaker2 from '../../public/images/강사2.png';
+import Speaker3 from '../../public/images/강사3.png';
+import MapImage from '../../public/images/구미지도.png';
+import LogoText from '../../public/images/글자로고.png';
+import ScheduleImage from '../../public/images/일정표.png';
+import LocationMark from '../../public/images/위치마크.png';
+import ExampleImage from '../../public/images/예시.png';
+import Logo from '../../public/images/로고.png';
 
 const images = {
   background: BackgroundImage,
