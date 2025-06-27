@@ -5,6 +5,7 @@ import Head from 'next/head';
 import Image from 'next/image';
 import { motion, useInView, AnimatePresence, useAnimation } from 'framer-motion';
 import styles from './page.module.css';
+import images from './images';
 
 interface FormData {
   name: string;
@@ -151,7 +152,7 @@ export default function Home() {
     <div className={styles.container}>
       <div className={styles.background}>
         <Image 
-          src="/images/배경.png" 
+          src={images.background}
           alt="Background" 
           fill
           priority
@@ -173,11 +174,11 @@ export default function Home() {
             <div className={styles.titleImage}>
               <div className={styles.imageWrapper}>
                 <Image 
-                  src="/images/메인제목.png" 
+                  src={images.mainTitle}
                   alt="부모교사세미나" 
                   priority
-                  width={1000} 
-                  height={1000}
+                  fill
+                  sizes="100vw"
                 />
               </div>
             </div>
@@ -259,7 +260,7 @@ export default function Home() {
             >
               <div className={styles.subTitleBackground}>
                 <Image 
-                  src="/images/글자배경.png" 
+                  src={images.subTitleBg}
                   alt="" 
                   fill
                   className={styles.subTitleImage}
@@ -285,7 +286,7 @@ export default function Home() {
           <section className={styles.section} id="speaker-section">
             <div className={styles.sectionHeader}>
               <div className={styles.subTitleBackground}>
-                <Image src="/images/글자배경.png" alt="" fill className={styles.subTitleImage} />
+                <Image src={images.subTitleBg} alt="" fill className={styles.subTitleImage} />
                 <span className={styles.subTitleText}>강사</span>
               </div>
             </div>
@@ -319,9 +320,10 @@ export default function Home() {
                 >
                   <div className={styles.speakerImageWrapper}>
                     <Image 
-                      src="/images/강사1.png" 
+                      src={images.speakers[0].image}
                       alt="김정원 목사"
                       fill
+                      sizes="(max-width: 768px) 100vw, 50vw"
                       className={styles.speakerImage}
                     />
                   </div>
@@ -352,9 +354,10 @@ export default function Home() {
                 >
                   <div className={styles.speakerImageWrapper}>
                     <Image 
-                      src="/images/강사2.png" 
+                      src={images.speakers[1].image}
                       alt="정우성 이사"
                       fill
+                      sizes="(max-width: 768px) 100vw, 50vw"
                       className={styles.speakerImage}
                     />
                   </div>
@@ -385,9 +388,10 @@ export default function Home() {
                 >
                   <div className={styles.speakerImageWrapper}>
                     <Image 
-                      src="/images/강사3.png" 
-                      alt="육진경 대표"
+                      src={images.speakers[2].image}
+                      alt="이지은 교수"
                       fill
+                      sizes="(max-width: 768px) 100vw, 50vw"
                       className={styles.speakerImage}
                     />
                   </div>
@@ -433,7 +437,7 @@ export default function Home() {
             >
               <div className={styles.subTitleBackground}>
                 <Image 
-                  src="/images/글자배경.png" 
+                  src={images.subTitleBg}
                   alt="" 
                   fill
                   className={styles.subTitleImage}
@@ -455,14 +459,15 @@ export default function Home() {
               }}
               viewport={{ once: true }}
             >
-              <Image 
-                src="/images/일정표.png" 
-                alt="일정"
-                width={1000}
-                height={1000}
-                className={styles.scheduleImage}
-                priority
-              />
+              <div className={styles.scheduleImage}>
+                <Image 
+                  src={images.schedule}
+                  alt="세미나 일정"
+                  width={1000}
+                  height={500}
+                  className={styles.schedule}
+                />
+              </div>
             </motion.div>
           </motion.section>
           
@@ -559,14 +564,13 @@ export default function Home() {
                 }}
                 viewport={{ once: true }}
               >
-                <div className={styles.mapImageWrapper}>
+                <div className={styles.mapImage}>
                   <Image 
-                    src="/images/구미지도.png" 
+                    src={images.map}
                     alt="안디옥교회 위치"
                     fill
-                    className={styles.mapImage}
-                    priority
-                  />
+                    className={styles.map}
+                  />  
                 </div>
               </motion.div>
             </motion.div>

@@ -1,13 +1,24 @@
 {
   "name": "antioch-seminar",
+  "homepage": "https://obedlee.github.io/Antioch/",
   "version": "0.1.0",
   "private": true,
-  "scripts": {
-    "dev": "next dev --turbopack",
+ "scripts": {
+    "dev": "next dev",
+    "prebuild": "rimraf .next",
     "build": "next build",
+    "preexport": "rimraf out",
+    "export": "next export",
+    "touch": "touch out/.nojekyll",
+    "posttouch": "touch out/_next/.nojekyll",
     "start": "next start",
     "lint": "next lint",
-    "deploy": "next build && touch out/.nojekyll && git add -f out/ && git commit -m \"Deploy\" && git subtree push --prefix out origin gh-pages"
+    "lint:fix": "eslint --fix ./src",
+    "format": "prettier --check --ignore-path .gitignore .",
+    "format:fix": "prettier --write --ignore-path .gitignore .",
+    "storybook": "start-storybook -p 6006",
+    "build-storybook": "build-storybook",
+    "prepare": "husky install"
   },
   "dependencies": {
     "@google-cloud/local-auth": "^3.0.1",
