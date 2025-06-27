@@ -1,93 +1,992 @@
-import Image from "next/image";
-import styles from "./page.module.css";
+'use client';
+
+import { useState, useRef, useEffect, FormEvent } from 'react';
+import Head from 'next/head';
+import Image from 'next/image';
+import { motion, useInView, AnimatePresence, useAnimation } from 'framer-motion';
+import styles from './page.module.css';
+
+interface FormData {
+  name: string;
+  phone: string;
+  birthYear: string;
+  church: string;
+}
 
 export default function Home() {
-  return (
-    <div className={styles.page}>
-      <main className={styles.main}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol>
-          <li>
-            Get started by editing <code>src/app/page.tsx</code>.
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  const [showTitle, setShowTitle] = useState(false);
+  
+  useEffect(() => {
+    // Show title with a small delay
+    const timer = setTimeout(() => {
+      setShowTitle(true);
+    }, 300);
+    
+    return () => clearTimeout(timer);
+  }, []);
 
-        <div className={styles.ctas}>
-          <a
-            className={styles.primary}
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+  const [formData, setFormData] = useState<FormData>({
+    name: '',
+    phone: '',
+    birthYear: '',
+    church: '',
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isChecking, setIsChecking] = useState(false);
+  const [submitStatus, setSubmitStatus] = useState<{ success: boolean; message: string } | null>(null);
+  const [showConfirmation, setShowConfirmation] = useState(false);
+  const [submittedData, setSubmittedData] = useState<FormData | null>(null);
+  const [isEditMode, setIsEditMode] = useState(false);
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setSubmittedData({...formData});
+    setShowConfirmation(true);
+  };
+
+  const handleCheckPhone = async () => {
+    if (!formData.phone) {
+      setSubmitStatus({
+        success: false,
+        message: '휴대폰 번호를 입력해주세요.'
+      });
+      return;
+    }
+
+    setIsChecking(true);
+    try {
+      const response = await fetch('/api/check', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ phone: formData.phone }),
+      });
+
+      const result = await response.json();
+
+      if (result.success && result.exists) {
+        // 기존 데이터로 폼 채우기
+        setFormData({
+          name: result.data.name || '',
+          phone: result.data.phone || '',
+          birthYear: result.data.birthYear || '',
+          church: result.data.church || '',
+        });
+        setIsEditMode(true);
+        setSubmitStatus({
+          success: true,
+          message: '기존 신청 내역을 불러왔습니다. 수정 후 제출해주세요.'
+        });
+      } else {
+        setSubmitStatus({
+          success: false,
+          message: '등록된 신청 내역이 없습니다. 새로 작성해주세요.'
+        });
+      }
+    } catch (error) {
+      setSubmitStatus({
+        success: false,
+        message: '조회 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.'
+      });
+    } finally {
+      setIsChecking(false);
+    }
+  };
+
+  const confirmSubmission = async () => {
+    if (!submittedData) return;
+    
+    setIsSubmitting(true);
+    setShowConfirmation(false);
+    
+    try {
+      const response = await fetch('/api/submit', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...submittedData,
+          timestamp: new Date().toISOString(),
+        }),
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        setSubmitStatus({
+          success: true,
+          message: result.isUpdate ? '신청 정보가 수정되었습니다.' : '신청이 완료되었습니다. 감사합니다!',
+        });
+        setFormData({
+          name: '',
+          phone: '',
+          birthYear: '',
+          church: '',
+        });
+        setIsEditMode(false);
+      } else {
+        // 서버에서 보낸 에러 메시지가 있으면 그대로 표시
+        const errorMessage = result.message || '제출에 실패했습니다.';
+        throw new Error(errorMessage);
+      }
+    } catch (error) {
+      setSubmitStatus({
+        success: false,
+        message: error instanceof Error ? error.message : '오류가 발생했습니다. 잠시 후 다시 시도해주세요.',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = event.target;
+    setFormData({ ...formData, [name]: value });
+    setSubmitStatus(null); // Clear status when user starts typing
+  };
+
+  return (
+    <div className={styles.container}>
+      <div className={styles.background}>
+        <Image 
+          src="/images/배경.png" 
+          alt="Background" 
+          fill
+          priority
+          quality={100}
+          className={styles.backgroundImage}
+        />
+      </div>
+      
+      <main className={styles.main}>
+        <div className={styles.contentWrapper}>
+          <motion.header 
+            className={styles.header}
+            initial={{ opacity: 1 }}
           >
-            <Image
-              className={styles.logo}
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-            className={styles.secondary}
+            {/* Watercolor Splash Background */}
+
+            
+            {/* Title */}
+            <div className={styles.titleImage}>
+              <div className={styles.imageWrapper}>
+                <Image 
+                  src="/images/메인제목.png" 
+                  alt="부모교사세미나" 
+                  priority
+                  width={1000} 
+                  height={1000}
+                />
+              </div>
+            </div>
+          </motion.header>
+
+          {/* Date & Time Section */}
+          <motion.section 
+            className={`${styles.section} ${styles.compact}`}
+            initial={{ opacity: 0, y: 40 }}
+            whileInView={{ 
+              opacity: 1, 
+              y: 0,
+              transition: {
+                duration: 0.6,
+                ease: "easeOut"
+              }
+            }}
+            viewport={{ once: true, amount: 0.2 }}
           >
-            Read our docs
-          </a>
+            <motion.div 
+              className={styles.sectionHeader}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ 
+                opacity: 1, 
+                y: 0,
+                transition: { delay: 0.1, duration: 0.5 }
+              }}
+              viewport={{ once: true }}
+            >
+              <div className={styles.subTitleBackground}>
+                <Image 
+                  src="/images/글자배경.png" 
+                  alt=""
+                  fill
+                  className={styles.subTitleImage}
+                  priority
+                />
+                <span className={styles.subTitleText}>일시</span>
+              </div>
+            </motion.div>
+            <motion.p 
+              className={styles.subContents}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ 
+                opacity: 1, 
+                y: 0,
+                transition: { delay: 0.2, duration: 0.5 }
+              }}
+              viewport={{ once: true }}
+            >
+              2025. 07. 05 (토) <br />
+              <span className={styles.timeText}>09:30 ~ 14:20</span>
+            </motion.p>
+          </motion.section>
+
+          {/* Location Section */}
+          <motion.section 
+            className={`${styles.section} ${styles.compact}`}
+            initial={{ opacity: 0, y: 40 }}
+            whileInView={{ 
+              opacity: 1, 
+              y: 0,
+              transition: {
+                duration: 0.6,
+                ease: "easeOut"
+              }
+            }}
+            viewport={{ once: true, amount: 0.2 }}
+          >
+            <motion.div 
+              className={styles.sectionHeader}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ 
+                opacity: 1, 
+                y: 0,
+                transition: { delay: 0.1, duration: 0.5 }
+              }}
+              viewport={{ once: true }}
+            >
+              <div className={styles.subTitleBackground}>
+                <Image 
+                  src="/images/글자배경.png" 
+                  alt="" 
+                  fill
+                  className={styles.subTitleImage}
+                />
+                <span className={styles.subTitleText}>장소</span>
+              </div>
+            </motion.div>
+            <motion.p 
+              className={styles.subContents}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ 
+                opacity: 1, 
+                y: 0,
+                transition: { delay: 0.2, duration: 0.5 }
+              }}
+              viewport={{ once: true }}
+            >
+              안디옥교회
+            </motion.p>
+          </motion.section>
+
+          {/* 강사 소개 섹션 */}
+          <section className={styles.section} id="speaker-section">
+            <div className={styles.sectionHeader}>
+              <div className={styles.subTitleBackground}>
+                <Image src="/images/글자배경.png" alt="" fill className={styles.subTitleImage} />
+                <span className={styles.subTitleText}>강사</span>
+              </div>
+            </div>
+          
+            <div className={styles.speakerContainer}>
+              <motion.div 
+                className={styles.speakerRow}
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ 
+                  opacity: 1, 
+                  y: 0,
+                  transition: {
+                    duration: 0.6,
+                    ease: "easeOut"
+                  }
+                }}
+                viewport={{ once: true, amount: 0.3 }}
+              >
+                <motion.div 
+                  className={styles.speakerItem}
+                  initial={{ opacity: 0, x: -20 }}
+                  whileInView={{ 
+                    opacity: 1, 
+                    x: 0,
+                    transition: {
+                      delay: 0.1,
+                      duration: 0.5
+                    }
+                  }}
+                  viewport={{ once: true }}
+                >
+                  <div className={styles.speakerImageWrapper}>
+                    <Image 
+                      src="/images/강사1.png" 
+                      alt="김정원 목사"
+                      fill
+                      className={styles.speakerImage}
+                    />
+                  </div>
+                  <div className={styles.speakerInfo}>
+                    <h3 className={styles.speakerName}>
+                      <span className={styles.name}>김정원</span>
+                      <span className={styles.title}>목사</span>
+                    </h3>
+                    <ul className={styles.speakerDetails}>
+                      <li className={styles.speakerInfoText}>안디옥교회 담임</li>
+                      <li className={styles.speakerInfoText}>(사) 글로벌 플랜터스 대표</li>
+                    </ul>
+                  </div>
+                </motion.div>
+
+                <motion.div 
+                  className={styles.speakerItem}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ 
+                    opacity: 1, 
+                    y: 0,
+                    transition: {
+                      delay: 0.2,
+                      duration: 0.5
+                    }
+                  }}
+                  viewport={{ once: true }}
+                >
+                  <div className={styles.speakerImageWrapper}>
+                    <Image 
+                      src="/images/강사2.png" 
+                      alt="정우성 이사"
+                      fill
+                      className={styles.speakerImage}
+                    />
+                  </div>
+                  <div className={styles.speakerInfo}>
+                    <h3 className={styles.speakerName}>
+                      <span className={styles.name}>정우성</span>
+                      <span className={styles.title}>이사</span>
+                    </h3>
+                    <ul className={styles.speakerDetails}>
+                      <li className={styles.speakerInfoText}>한국창조과학회 이사</li>
+                      <li className={styles.speakerInfoText}>삼성전자 수석연구원</li>
+                    </ul>
+                  </div>
+                </motion.div>
+
+                <motion.div 
+                  className={styles.speakerItem}
+                  initial={{ opacity: 0, x: 20 }}
+                  whileInView={{ 
+                    opacity: 1, 
+                    x: 0,
+                    transition: {
+                      delay: 0.3,
+                      duration: 0.5
+                    }
+                  }}
+                  viewport={{ once: true }}
+                >
+                  <div className={styles.speakerImageWrapper}>
+                    <Image 
+                      src="/images/강사3.png" 
+                      alt="육진경 대표"
+                      fill
+                      className={styles.speakerImage}
+                    />
+                  </div>
+                  <div className={styles.speakerInfo}>
+                    <h3 className={styles.speakerName}>
+                      <span className={styles.name}>육진경</span>
+                      <span className={styles.title}>대표</span>
+                    </h3>
+                    <ul className={styles.speakerDetails}>
+                      <li className={styles.speakerInfoText}>전국교육회복교사연합 대표</li>
+                      <li className={styles.speakerInfoText}>새하늘교회 사모</li>
+                      <li className={styles.speakerInfoText}>전) 서울상도중학교 교사</li>
+                    </ul>
+                  </div>
+                </motion.div>
+              </motion.div>
+            </div>
+          </section>
+          
+          {/* 일정 섹션 */}
+          <motion.section 
+            className={`${styles.section} ${styles.scheduleSection}`}
+            initial={{ opacity: 0, y: 50 }}
+            whileInView={{ 
+              opacity: 1, 
+              y: 0,
+              transition: {
+                duration: 0.7,
+                ease: "easeOut"
+              }
+            }}
+            viewport={{ once: true, amount: 0.2 }}
+          >
+            <motion.div 
+              className={styles.sectionHeader}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ 
+                opacity: 1, 
+                y: 0,
+                transition: { delay: 0.1, duration: 0.5 }
+              }}
+              viewport={{ once: true }}
+            >
+              <div className={styles.subTitleBackground}>
+                <Image 
+                  src="/images/글자배경.png" 
+                  alt="" 
+                  fill
+                  className={styles.subTitleImage}
+                />
+                <span className={styles.subTitleText}>일정</span>
+              </div>
+            </motion.div>
+            
+            <motion.div
+              initial={{ opacity: 0, scale: 0.98 }}
+              whileInView={{ 
+                opacity: 1, 
+                scale: 1,
+                transition: { 
+                  delay: 0.2, 
+                  duration: 0.7,
+                  ease: [0.16, 1, 0.3, 1]
+                }
+              }}
+              viewport={{ once: true }}
+            >
+              <Image 
+                src="/images/일정표.png" 
+                alt="일정"
+                width={1000}
+                height={1000}
+                className={styles.scheduleImage}
+                priority
+              />
+            </motion.div>
+          </motion.section>
+          
+          {/* 위치 섹션 */}
+          <motion.section 
+            className={styles.section}
+            initial={{ opacity: 0, y: 50 }}
+            whileInView={{ 
+              opacity: 1, 
+              y: 0,
+              transition: {
+                duration: 0.7,
+                ease: "easeOut"
+              }
+            }}
+            viewport={{ once: true, amount: 0.1 }}
+          >
+            <motion.div 
+              className={styles.sectionHeader}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ 
+                opacity: 1, 
+                y: 0,
+                transition: { delay: 0.1, duration: 0.5 }
+              }}
+              viewport={{ once: true }}
+            >
+              <div className={styles.subTitleBackground}>
+                <Image 
+                  src="/images/글자배경.png" 
+                  alt="" 
+                  fill
+                  className={styles.subTitleImage}
+                />
+                <span className={styles.subTitleText}>위치</span>
+              </div>
+            </motion.div>
+          
+          {/* 구미 안디옥교회 위치 섹션 */}
+            <motion.div 
+              className={styles.locationContent}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ 
+                opacity: 1, 
+                y: 0,
+                transition: { delay: 0.2, duration: 0.6 }
+              }}
+              viewport={{ once: true }}
+            >
+              <div className={styles.addressContainer}>
+                <motion.div 
+                  className={styles.addressRow}
+                  initial={{ opacity: 0, x: -20 }}
+                  whileInView={{ 
+                    opacity: 1, 
+                    x: 0,
+                    transition: { 
+                      delay: 0.3,
+                      duration: 0.5 
+                    }
+                  }}
+                  viewport={{ once: true }}
+                >
+                  <span className={styles.placeName}>구미안디옥교회</span>
+                  <span className={styles.addressDetail}>경북 구미시 오태길 51</span>
+                  <motion.button 
+                    onClick={() => {
+                      navigator.clipboard.writeText('경북 구미시 오태길 51');
+                      alert('주소가 클립보드에 복사되었습니다.');
+                    }}
+                    className={styles.copyButton}
+                    aria-label="주소 복사"
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                    </svg>
+                  </motion.button>
+                </motion.div>
+              </div>
+              <motion.div 
+                className={styles.mapContainer}
+                initial={{ opacity: 0, scale: 0.98 }}
+                whileInView={{ 
+                  opacity: 1, 
+                  scale: 1,
+                  transition: { 
+                    delay: 0.4, 
+                    duration: 0.6,
+                    ease: [0.16, 1, 0.3, 1]
+                  }
+                }}
+                viewport={{ once: true }}
+              >
+                <div className={styles.mapImageWrapper}>
+                  <Image 
+                    src="/images/구미지도.png" 
+                    alt="안디옥교회 위치"
+                    fill
+                    className={styles.mapImage}
+                    priority
+                  />
+                </div>
+              </motion.div>
+            </motion.div>
+  
+            {/* 구미 안디옥교회 위치 섹션 */}
+            <motion.div 
+              className={styles.locationContent}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ 
+                opacity: 1, 
+                y: 0,
+                transition: { delay: 0.2, duration: 0.6 }
+              }}
+              viewport={{ once: true }}
+            >
+              <div className={styles.addressContainer}>
+                <motion.div 
+                  className={styles.addressRow}
+                  initial={{ opacity: 0, x: -20 }}
+                  whileInView={{ 
+                    opacity: 1, 
+                    x: 0,
+                    transition: { 
+                      delay: 0.3,
+                      duration: 0.5 
+                    }
+                  }}
+                  viewport={{ once: true }}
+                >
+                  <span className={styles.placeName}>서울안디옥교회</span>
+                  <span className={styles.addressDetail}>서울 강동구 천중로44길 28</span>
+                  <motion.button 
+                    onClick={() => {
+                      navigator.clipboard.writeText('서울 강동구 천중로44길 28');
+                      alert('주소가 클립보드에 복사되었습니다.');
+                    }}
+                    className={styles.copyButton}
+                    aria-label="주소 복사"
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                    </svg>
+                  </motion.button>
+                </motion.div>
+              </div>
+              <motion.div 
+                className={styles.mapContainer}
+                initial={{ opacity: 0, scale: 0.98 }}
+                whileInView={{ 
+                  opacity: 1, 
+                  scale: 1,
+                  transition: { 
+                    delay: 0.4, 
+                    duration: 0.6,
+                    ease: [0.16, 1, 0.3, 1]
+                  }
+                }}
+                viewport={{ once: true }}
+              >
+                <div className={styles.mapImageWrapper}>
+                  <Image 
+                    src="/images/서울지도.png" 
+                    alt="안디옥교회 위치"
+                    fill
+                    className={styles.mapImage}
+                    priority
+                  />
+                </div>
+              </motion.div>
+            </motion.div>
+          </motion.section>
+
+          {/* 신청/문의 섹션 */}
+          <motion.section 
+            className={styles.section}
+            initial={{ opacity: 0, y: 50 }}
+            whileInView={{ 
+              opacity: 1, 
+              y: 0,
+              transition: {
+                duration: 0.7,
+                ease: "easeOut"
+              }
+            }}
+            viewport={{ once: true, amount: 0.1 }}
+          >
+            <motion.div 
+              className={styles.sectionHeader}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ 
+                opacity: 1, 
+                y: 0,
+                transition: { delay: 0.1, duration: 0.5 }
+              }}
+              viewport={{ once: true }}
+            >
+              <div className={styles.subTitleBackground}>
+                <Image 
+                  src="/images/글자배경2.png" 
+                  alt="" 
+                  fill
+                  className={styles.subTitleImage}
+                />
+                <span className={styles.subTitleText}>신청/접수</span>
+              </div>
+            </motion.div>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ 
+                opacity: 1, 
+                y: 0,
+                transition: { 
+                  delay: 0.2, 
+                  duration: 0.6,
+                  ease: [0.16, 1, 0.3, 1]
+                }
+              }}
+              viewport={{ once: true }}
+              className={styles.formContainer}
+            >
+              <table className={styles.infoTable}>
+                <tbody>
+                  <tr>
+                    <th className={styles.tableHeader}>회비</th>
+                    <td>3만원(초·중·고 2만원)</td>
+                  </tr>
+                  <tr>
+                    <th rowSpan={3} className={styles.tableHeader}>등록계좌</th>
+                    <td className={styles.accountCell}>
+                      <div className={styles.bankLocation}>구미</div>
+                      <div className={styles.accountRow}>
+                        <span className={styles.accountNumber}>3333-26-3472535</span>
+                        <button 
+                          onClick={() => {
+                            navigator.clipboard.writeText('3333263472535');
+                            alert('계좌번호가 복사되었습니다.');
+                          }} 
+                          className={styles.copyButton}
+                          aria-label="계좌번호 복사"
+                        >
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                          </svg>
+                        </button>
+                      </div>
+                      <div className={styles.bankName}>카카오뱅크 (신정민)</div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className={styles.accountCell}>
+                      <div className={styles.bankLocation}>서울</div>
+                      <div className={styles.accountRow}>
+                        <span className={styles.accountNumber}>352-1376-8331-93</span>
+                        <button 
+                          onClick={() => {
+                            navigator.clipboard.writeText('3521376833193');
+                            alert('계좌번호가 복사되었습니다.');
+                          }} 
+                          className={styles.copyButton}
+                          aria-label="계좌번호 복사"
+                        >
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                          </svg>
+                        </button>
+                      </div>
+                      <div className={styles.bankName}>농협 (황은영)</div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td colSpan={3} className={styles.noticeCell}>※ 반드시 수강자 이름으로 입금해주세요.</td>
+                  </tr>
+                  <tr>
+                    <th className={styles.tableHeader}>등록기간</th>
+                    <td colSpan={3}>6월 29일(주일)까지 (마감 후 1만원 추가)</td>
+                  </tr>
+                  <tr>
+                    <th rowSpan={2} className={styles.tableHeader}>문의</th>
+                    <td colSpan={3} className={styles.contactCell}>신정민 간사 010-6395-8592</td>
+                  </tr>
+                  <tr>
+                    <td colSpan={3} className={styles.contactCell}>황은영 간사 010-8377-8573</td>
+                  </tr>
+                </tbody>
+              </table>
+            </motion.div>
+          </motion.section>
+
+          {/* 신청서 작성 섹션 */}
+          <motion.section 
+            className={styles.section}
+            initial={{ opacity: 0, y: 50 }}
+            whileInView={{ 
+              opacity: 1, 
+              y: 0,
+              transition: {
+                duration: 0.7,
+                ease: "easeOut"
+              }
+            }}
+            viewport={{ once: true, amount: 0.1 }}
+          >
+            <motion.div 
+              className={styles.sectionHeader}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ 
+                opacity: 1, 
+                y: 0,
+                transition: { delay: 0.1, duration: 0.5 }
+              }}
+              viewport={{ once: true }}
+            >
+              <div className={styles.subTitleBackground}>
+                <Image 
+                  src="/images/글자배경2.png" 
+                  alt="" 
+                  fill
+                  className={styles.subTitleImage}
+                />
+                <span className={styles.subTitleText}>신청서 작성</span>
+              </div>
+            </motion.div>
+            <motion.div 
+              className={styles.formContainer}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ 
+                opacity: 1, 
+                y: 0,
+                transition: { 
+                  delay: 0.2, 
+                  duration: 0.6,
+                  ease: [0.16, 1, 0.3, 1]
+                }
+              }}
+              viewport={{ once: true }}
+            >
+              <form className={styles.applicationForm} onSubmit={handleSubmit}>
+                <div className={styles.formGroup}>
+                  <label htmlFor="name">이름</label>
+                  <input 
+                    type="text" 
+                    id="name" 
+                    name="name"
+                    className={styles.formInput}
+                    placeholder="이름을 입력해주세요"
+                    value={formData.name}
+                    onChange={handleChange}
+                    required 
+                  />
+                </div>
+                
+                <div className={styles.formGroup}>
+                  <label htmlFor="phone">휴대폰번호 *</label>
+                  <div className={styles.phoneInputContainer}>
+                    <input
+                      type="tel"
+                      id="phone"
+                      value={formData.phone}
+                      onChange={(e) => {
+                        setFormData({...formData, phone: e.target.value});
+                        setIsEditMode(false);
+                      }}
+                      placeholder="010-1234-5678"
+                      required
+                      className={styles.phoneInput}
+                    />
+                    <button 
+                      type="button" 
+                      onClick={handleCheckPhone}
+                      disabled={!formData.phone || isChecking}
+                      className={styles.checkButton}
+                    >
+                      {isChecking ? '조회 중...' : '조회'}
+                    </button>
+                  </div>
+                  {isEditMode && (
+                    <p className={styles.editNotice}>
+                      기존 신청 내역이 있습니다. 수정 후 제출해주세요.
+                    </p>
+                  )}
+                </div>
+                
+                <div className={styles.formGroup}>
+                  <label htmlFor="birthYear">출생연도</label>
+                  <input 
+                    type="number" 
+                    id="birthYear" 
+                    name="birthYear"
+                    min="1900" 
+                    max={new Date().getFullYear()}
+                    className={styles.formInput}
+                    placeholder="출생연도 4자리를 입력해주세요 (예: 1990)"
+                    value={formData.birthYear}
+                    onChange={handleChange}
+                    required 
+                  />
+                </div>
+                
+                <div className={styles.formGroup}>
+                  <label htmlFor="church">섬기는교회(담임목사님 성함)</label>
+                  <input 
+                    type="text" 
+                    id="church" 
+                    name="church"
+                    className={styles.formInput}
+                    placeholder="예: 서울안디옥교회(홍길동)"
+                    value={formData.church}
+                    onChange={handleChange}
+                    required 
+                  />
+                </div>
+                
+                {submitStatus && (
+                  <div className={`${styles.statusMessage} ${submitStatus.success ? styles.success : styles.error}`}>
+                    {submitStatus.message}
+                  </div>
+                )}
+                
+                <button 
+                  type="submit" 
+                  disabled={isSubmitting}
+                  className={styles.submitButton}
+                >
+                  {isSubmitting ? '제출 중...' : isEditMode ? '수정하기' : '신청하기'}
+                </button>
+              </form>
+            </motion.div>
+          </motion.section>
         </div>
       </main>
+
+          {/* 확인 모달 */}
+          <AnimatePresence>
+            {showConfirmation && submittedData && (
+              <motion.div 
+                className={styles.modalOverlay}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                <motion.div 
+                  className={styles.confirmationModal}
+                  initial={{ scale: 0.9, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0.9, opacity: 0 }}
+                  transition={{ 
+                    type: "spring",
+                    damping: 25,
+                    stiffness: 500
+                  }}
+                >
+                  <h3>입력하신 정보를 확인해주세요</h3>
+                  <div className={styles.confirmationContent}>
+                    <p><strong>이름:</strong> {submittedData?.name}</p>
+                    <p><strong>휴대폰번호:</strong> {submittedData?.phone}</p>
+                    <p><strong>출생연도:</strong> {submittedData?.birthYear}</p>
+                    <p><strong>섬기는교회:</strong> {submittedData?.church}</p>
+                  </div>
+                  <div className={styles.modalButtons}>
+                    <button 
+                      onClick={() => setShowConfirmation(false)}
+                      className={styles.cancelButton}
+                      disabled={isSubmitting}
+                    >
+                      취소
+                    </button>
+                    <button 
+                      onClick={confirmSubmission}
+                      className={styles.confirmButton}
+                      disabled={isSubmitting}
+                    >
+                      {isSubmitting ? '처리 중...' : '확인'}
+                    </button>
+                  </div>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+      
+      {/* Footer */}
       <footer className={styles.footer}>
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          target="_blank"
+        <p className={styles.copyright}> 2025 안디옥교회. All rights reserved.</p>
+        <a 
+          href="https://antiochi.org/ko" 
+          target="_blank" 
           rel="noopener noreferrer"
+          title="안디옥교회 홈페이지로 이동 (새 창에서 열림)"
+          className={styles.logoLink}
         >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
+          <Image 
+            src="/images/주최로고.png" 
+            alt="안디옥교회" 
+            width={240}
+            height={80}
+            className={styles.footerLogo}
+            priority
           />
-          Learn
-        </a>
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
+          <span className={styles.clickHint}>
+          <svg 
+              className={styles.clickArrow}
+              width="20" 
+              height="20" 
+              viewBox="0 0 24 24" 
+              fill="none" 
+              stroke="currentColor" 
+              strokeWidth="2" 
+              strokeLinecap="round" 
+              strokeLinejoin="round"
+            >
+            <line x1="19" y1="12" x2="5" y2="12"></line>
+            <polyline points="12 19 5 12 12 5"></polyline>
+          </svg>
+          Click!
+          </span>
         </a>
       </footer>
     </div>
