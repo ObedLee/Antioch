@@ -1,6 +1,6 @@
-import type { NextConfig } from "next";
-const nextConfig = {
-  output: 'export',
-  basePath: '/Antioch',
-}
-export default nextConfig;
+module.exports = {
+  assetPrefix:
+    process.env.NODE_ENV === 'production'
+      ? 'https://obedlee.github.io/Antioch/'
+      : '',
+};
