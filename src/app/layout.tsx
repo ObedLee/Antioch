@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
+import images from './images';
 
 // Pretendard 폰트 로드
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
@@ -20,8 +21,8 @@ export const metadata: Metadata = {
   viewport: "width=device-width, initial-scale=1.0",
   themeColor: "#2b6cb0",
   icons: {
-    icon: "/images/아이콘.png",
-    apple: "/images/아이콘.png",
+    icon: images.icon.src,
+    apple: images.icon.src,
   },
   openGraph: {
     title: "부모교사세미나 - 성경적 세계관 교육",
@@ -30,7 +31,7 @@ export const metadata: Metadata = {
     siteName: "안디옥교회",
     images: [
       {
-        url: "/images/OG.jpg",
+        url: images.og.src,
         width: 1200,
         height: 630,
         alt: "부모교사세미나",
@@ -43,7 +44,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "부모교사세미나 - 성경적 세계관 교육",
     description: "안디옥교회에서 진행하는 부모교사세미나에 초대합니다.",
-    images: ["/images/OG.jpg"],
+    images: images.og.src,
   },
 };
 

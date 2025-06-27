@@ -13,6 +13,8 @@ import LocationMark from '../../public/images/위치마크.png';
 import ExampleImage from '../../public/images/예시.png';
 import Logo from '../../public/images/로고.png';
 import Logo2 from '../../public/images/주최로고.png';
+import Icon from '../../public/images/favicon.ico';
+import OG from '../../public/images/OG.jpg';
 
 const images = {
   background: BackgroundImage,
@@ -31,7 +33,9 @@ const images = {
   locationMark: LocationMark,
   example: ExampleImage,
   logo: Logo,
-  logo2: Logo2
+  logo2: Logo2,
+  icon: Icon,
+  og: OG
 };
 
 export default images;
