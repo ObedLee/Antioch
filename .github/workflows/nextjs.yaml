@@ -60,10 +60,12 @@ jobs:
           echo "GOOGLE_SHEETS_CLIENT_EMAIL=${{ secrets.GOOGLE_SHEETS_CLIENT_EMAIL }}" > .env
           echo "GOOGLE_SHEETS_PRIVATE_KEY=${{ secrets.GOOGLE_SHEETS_PRIVATE_KEY }}" >> .env
           echo "GOOGLE_SHEETS_SPREADSHEET_ID=${{ secrets.GOOGLE_SHEETS_SPREADSHEET_ID }}" >> .env
+          echo "GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY }}" >> .env
         env:
           GOOGLE_SHEETS_CLIENT_EMAIL: ${{ secrets.GOOGLE_SHEETS_CLIENT_EMAIL }}
           GOOGLE_SHEETS_PRIVATE_KEY: ${{ secrets.GOOGLE_SHEETS_PRIVATE_KEY }}
           GOOGLE_SHEETS_SPREADSHEET_ID: ${{ secrets.GOOGLE_SHEETS_SPREADSHEET_ID }}
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
 
       - name: 환경 변수 디버그 정보 출력
         run: |
@@ -71,6 +73,7 @@ jobs:
           echo "CLIENT_EMAIL: ${GOOGLE_SHEETS_CLIENT_EMAIL:+설정됨 (길이: ${#GOOGLE_SHEETS_CLIENT_EMAIL})}"
           echo "SPREADSHEET_ID: ${GOOGLE_SHEETS_SPREADSHEET_ID:+설정됨 (길이: ${#GOOGLE_SHEETS_SPREADSHEET_ID})}"
           echo "PRIVATE_KEY: ${GOOGLE_SHEETS_PRIVATE_KEY:+설정됨 (길이: ${#GOOGLE_SHEETS_PRIVATE_KEY})}"
+          echo "GOOGLE_API_KEY: ${GOOGLE_API_KEY:+설정됨 (길이: ${#GOOGLE_API_KEY})}"
           echo "===== .env 파일 정보 ====="
           echo "파일 크기: $(wc -c < .env) 바이트"
           echo "처음 50자: $(head -c 50 .env)..."
@@ -80,6 +83,7 @@ jobs:
           GOOGLE_SHEETS_CLIENT_EMAIL: ${{ secrets.GOOGLE_SHEETS_CLIENT_EMAIL }}
           GOOGLE_SHEETS_PRIVATE_KEY: ${{ secrets.GOOGLE_SHEETS_PRIVATE_KEY }}
           GOOGLE_SHEETS_SPREADSHEET_ID: ${{ secrets.GOOGLE_SHEETS_SPREADSHEET_ID }}
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
 
       - name: Install dependencies
         run: |

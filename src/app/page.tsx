@@ -125,81 +125,52 @@ export default function Home() {
     }
   };
 
-  // 클라이언트 사이드에서 Google Sheets API를 직접 호출하는 함수
+  // API 기본 URL을 가져오는 함수
+  const getApiBaseUrl = (): string => {
+    // 개발 환경에서는 상대 경로 사용
+    if (process.env.NODE_ENV === 'development') {
+      return '';
+    }
+    // 프로덕션 환경에서는 절대 경로 사용 (GitHub Pages용)
+    return 'https://obedlee.github.io/antioch-seminar';
+  };
+
+  // 서버 사이드 API를 통해 Google Sheets 데이터 조회
   const checkPhoneInSheet = async (phone: string) => {
     try {
-      // Google Sheets API 클라이언트 라이브러리 로드
-      await new Promise((resolve) => {
-        const script = document.createElement('script');
-        script.src = 'https://apis.google.com/js/api.js';
-        script.onload = resolve;
-        document.body.appendChild(script);
+      console.log('전화번호 확인 요청 (서버사이드 API 호출)');
+      
+      // 클라이언트 사이드에서 서버 API 호출
+      const response = await fetch('/api/check', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ phone }),
       });
 
-      // Google API 클라이언트 초기화
-      await new Promise((resolve, reject) => {
-        // @ts-ignore
-        gapi.load('client', { callback: resolve, onerror: reject });
-      });
-
-      // API 키와 클라이언트 ID 설정
-      const API_KEY = process.env.NEXT_PUBLIC_GOOGLE_API_KEY;
-      const CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
-      const SPREADSHEET_ID = process.env.NEXT_PUBLIC_GOOGLE_SHEET_ID;
-      const SHEET_NAME = 'Sheet1';
-
-      if (!API_KEY || !CLIENT_ID || !SPREADSHEET_ID) {
-        throw new Error('API 설정이 올바르지 않습니다.');
+      if (!response.ok) {
+        const error = await response.text();
+        console.error('서버 오류:', error);
+        throw new Error('서버에서 오류가 발생했습니다.');
       }
 
-      // Google API 클라이언트 초기화
-      // @ts-ignore
-      await gapi.client.init({
-        apiKey: API_KEY,
-        clientId: CLIENT_ID,
-        discoveryDocs: ['https://sheets.googleapis.com/$discovery/rest?version=v4'],
-        scope: 'https://www.googleapis.com/auth/spreadsheets.readonly',
-      });
-
-      // 시트 데이터 가져오기
-      // @ts-ignore
-      const response = await gapi.client.sheets.spreadsheets.values.get({
-        spreadsheetId: SPREADSHEET_ID,
-        range: `${SHEET_NAME}!A:D`, // A: 이름, B: 휴대폰번호, C: 출생년도, D: 교회
-      });
-
-      const rows = response.result.values;
-      if (!rows || rows.length === 0) {
+      const result = await response.json();
+      
+      if (result.success && result.exists) {
+        console.log('사용자 데이터 조회 성공');
+        return {
+          name: result.data.name || '',
+          phone: result.data.phone || '',
+          birthYear: result.data.birthYear || '',
+          church: result.data.church || '',
+        };
+      } else {
+        console.log('일치하는 전화번호를 찾을 수 없습니다.');
         return null;
       }
-
-      // 헤더 행 제거
-      const headers = rows[0];
-      const data = rows.slice(1);
-
-      // 휴대폰 번호로 검색
-      const phoneIndex = headers.indexOf('휴대폰번호');
-      if (phoneIndex === -1) return null;
-
-      const nameIndex = headers.indexOf('이름');
-      const birthYearIndex = headers.indexOf('출생년도');
-      const churchIndex = headers.indexOf('교회');
-
-      const foundRow = data.find(row => {
-        const rowPhone = row[phoneIndex]?.toString().trim() || '';
-        return rowPhone === phone.trim();
-      });
-
-      if (!foundRow) return null;
-
-      return {
-        name: foundRow[nameIndex] || '',
-        phone: foundRow[phoneIndex] || '',
-        birthYear: foundRow[birthYearIndex] || '',
-        church: foundRow[churchIndex] || '',
-      };
     } catch (error) {
-      console.error('Google Sheets API 오류:', error);
+      console.error('사용자 조회 중 오류:', error);
       throw error;
     }
   };
@@ -268,7 +239,7 @@ export default function Home() {
       console.log('Sending request to /api/submit');
       const startTime = Date.now();
       
-      const apiUrl = `${getApiBaseUrl()}/submit`;
+      const apiUrl = '/api/submit';
       console.log('Submit API 요청 URL:', apiUrl);
       
       const response = await fetch(apiUrl, {
