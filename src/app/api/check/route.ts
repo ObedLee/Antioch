@@ -93,8 +93,8 @@ export async function POST(request: Request) {
     
     console.log('사용할 시트 이름:', sheetName);
     
-    // 4. 시트 데이터 조회 (A:D 열: 이름, 휴대폰번호, 출생년도, 교회)
-    const range = `${sheetName}!A:D`;
+    // 4. 시트 데이터 조회 (A:E 열: 이름, 휴대폰번호, 출생년도, 교회)
+    const range = `${sheetName}!A:E`;
     console.log('데이터 조회 범위:', range);
     const data = await getSheetData(range);
     
