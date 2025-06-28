@@ -54,6 +54,16 @@ jobs:
           cache: "pnpm"
           cache-dependency-path: ./package-lock.json
 
+      - name: 환경 변수를 설정합니다.
+        run: |
+          echo "GOOGLE_SHEETS_CLIENT_EMAIL=$GOOGLE_SHEETS_CLIENT_EMAIL" >> .env
+          echo "GOOGLE_SHEETS_PRIVATE_KEY=$GOOGLE_SHEETS_PRIVATE_KEY" >> .env
+          echo "GOOGLE_SHEETS_SPREADSHEET_ID=$GOOGLE_SHEETS_SPREADSHEET_ID" >> .env
+        env:
+          GOOGLE_SHEETS_CLIENT_EMAIL: ${{ secrets.GOOGLE_SHEETS_CLIENT_EMAIL }}
+          GOOGLE_SHEETS_PRIVATE_KEY: ${{ secrets.GOOGLE_SHEETS_PRIVATE_KEY }}     
+          GOOGLE_SHEETS_SPREADSHEET_ID: ${{ secrets.GOOGLE_SHEETS_SPREADSHEET_ID }}  
+
       - name: Install dependencies
         run: |
           pnpm install
@@ -66,16 +76,6 @@ jobs:
         uses: actions/upload-pages-artifact@v3
         with:
           path: ./out
-
-      - name: 환경 변수를 설정합니다.
-        run: |
-          echo "GOOGLE_SHEETS_CLIENT_EMAIL=$GOOGLE_SHEETS_CLIENT_EMAIL" >> .env
-          echo "GOOGLE_SHEETS_PRIVATE_KEY=$GOOGLE_SHEETS_PRIVATE_KEY" >> .env
-          echo "GOOGLE_SHEETS_SPREADSHEET_ID=$GOOGLE_SHEETS_SPREADSHEET_ID" >> .env
-        env:
-          GOOGLE_SHEETS_CLIENT_EMAIL: ${{ secrets.GOOGLE_SHEETS_CLIENT_EMAIL }}
-          GOOGLE_SHEETS_PRIVATE_KEY: ${{ secrets.GOOGLE_SHEETS_PRIVATE_KEY }}     
-          GOOGLE_SHEETS_SPREADSHEET_ID: ${{ secrets.GOOGLE_SHEETS_SPREADSHEET_ID }}  
 
   # Deployment job
   deploy:
