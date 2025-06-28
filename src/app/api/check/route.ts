@@ -48,19 +48,39 @@ const getSheetData = async (range: string) => {
   }
 };
 
+// CORS 헤더 설정
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+};
+
+export async function OPTIONS() {
+  return new Response(null, {
+    status: 204,
+    headers: corsHeaders
+  });
+}
+
 export async function POST(request: Request) {
   try {
     console.log('API 요청 수신');
     
     if (!spreadsheetId || !apiKey) {
       console.error('필수 환경 변수가 설정되지 않았습니다.');
-      return NextResponse.json(
-        { 
+      return new NextResponse(
+        JSON.stringify({ 
           success: false, 
           message: '서버 설정 오류가 발생했습니다.',
           debug: process.env.NODE_ENV === 'development' ? '필수 환경 변수가 설정되지 않았습니다.' : undefined
-        },
-        { status: 500 }
+        }),
+        { 
+          status: 500,
+          headers: {
+            'Content-Type': 'application/json',
+            ...corsHeaders
+          }
+        }
       );
     }
 
@@ -68,9 +88,18 @@ export async function POST(request: Request) {
     console.log('요청 데이터:', { phone });
 
     if (!phone) {
-      return NextResponse.json(
-        { success: false, message: '휴대폰 번호를 입력해주세요.' },
-        { status: 400 }
+      return new NextResponse(
+        JSON.stringify({ 
+          success: false, 
+          message: '휴대폰 번호를 입력해주세요.' 
+        }),
+        { 
+          status: 400,
+          headers: {
+            'Content-Type': 'application/json',
+            ...corsHeaders
+          }
+        }
       );
     }
 
@@ -100,11 +129,20 @@ export async function POST(request: Request) {
     
     if (!data.values || data.values.length === 0) {
       console.log('시트에 데이터가 없습니다.');
-      return NextResponse.json({ 
-        success: true, 
-        exists: false,
-        debug: process.env.NODE_ENV === 'development' ? '시트에 데이터가 없습니다.' : undefined
-      });
+      return new NextResponse(
+        JSON.stringify({ 
+          success: true, 
+          exists: false,
+          debug: process.env.NODE_ENV === 'development' ? '시트에 데이터가 없습니다.' : undefined
+        }),
+        { 
+          status: 200,
+          headers: {
+            'Content-Type': 'application/json',
+            ...corsHeaders
+          }
+        }
+      );
     }
     
     // 헤더 행 찾기
@@ -119,11 +157,19 @@ export async function POST(request: Request) {
     
     if (phoneIndex === -1) {
       console.error('시트에 휴대폰번호 컬럼을 찾을 수 없습니다.');
-      return NextResponse.json({
-        success: false,
-        message: '서버 설정 오류가 발생했습니다.',
-        debug: process.env.NODE_ENV === 'development' ? '시트에 휴대폰번호 컬럼을 찾을 수 없습니다.' : undefined
-      }, { status: 500 });
+      return new NextResponse(
+        JSON.stringify({
+          success: false,
+          message: '일치하는 정보를 찾을 수 없습니다.'
+        }),
+        {
+          status: 404,
+          headers: {
+            'Content-Type': 'application/json',
+            ...corsHeaders
+          }
+        }
+      );
     }
     
     // 휴대폰 번호로 검색 (공백 제거 후 비교)
@@ -143,28 +189,46 @@ export async function POST(request: Request) {
       
       console.log('사용자 데이터 반환:', userData);
       
-      return NextResponse.json({
-        success: true,
-        exists: true,
-        data: userData,
-        debug: process.env.NODE_ENV === 'development' ? {
-          headers,
-          foundAt: rows.indexOf(existingRow) + 2 // +2 for 1-based index and header row
-        } : undefined
-      });
+      return new NextResponse(
+        JSON.stringify({
+          success: true,
+          exists: true,
+          data: userData,
+          debug: process.env.NODE_ENV === 'development' ? {
+            headers,
+            foundAt: rows.indexOf(existingRow) + 2 // +2 for 1-based index and header row
+          } : undefined
+        }),
+        { 
+          status: 200,
+          headers: {
+            'Content-Type': 'application/json',
+            ...corsHeaders
+          }
+        }
+      );
     }
     
     // 일치하는 데이터가 없는 경우
-    return NextResponse.json({
-      success: true,
-      exists: false,
-      debug: process.env.NODE_ENV === 'development' ? {
-        message: 'No matching phone number found',
-        searchedPhone: cleanPhone,
-        headers,
-        totalRows: rows.length
-      } : undefined
-    });
+    return new NextResponse(
+      JSON.stringify({
+        success: true,
+        exists: false,
+        debug: process.env.NODE_ENV === 'development' ? {
+          message: 'No matching phone number found',
+          searchedPhone: cleanPhone,
+          headers,
+          totalRows: rows.length
+        } : undefined
+      }),
+      { 
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json',
+          ...corsHeaders
+        }
+      }
+    );
     
   } catch (error: unknown) {
     console.error('API 처리 중 오류 발생:', error);
