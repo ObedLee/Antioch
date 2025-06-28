@@ -35,13 +35,59 @@ export default function Home() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isChecking, setIsChecking] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<{ success: boolean; message: string } | null>(null);
+  const [isEditMode, setIsEditMode] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [submittedData, setSubmittedData] = useState<FormData | null>(null);
-  const [isEditMode, setIsEditMode] = useState(false);
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+  useEffect(() => {
+    if (showConfirmation) {
+      console.log('Confirmation modal shown with data:', submittedData);
+    }
+  }, [showConfirmation, submittedData]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    
+    if (name === 'phone') {
+      setIsEditMode(false);
+    }
+    
+    // Clear status when user starts typing
+    setSubmitStatus(null);
+  };
+
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setSubmittedData({...formData});
+    
+    // 현재 폼 데이터를 기반으로 새로운 객체 생성 (공백 제거)
+    const dataToSubmit = {
+      name: formData.name.trim(),
+      phone: formData.phone.trim(),
+      birthYear: formData.birthYear.trim(),
+      church: formData.church.trim()
+    };
+    
+    console.log('Submitting form data:', dataToSubmit);
+    
+    // 폼 상태 업데이트
+    setFormData(dataToSubmit);
+    
+    // 제출 데이터 설정 (새로운 객체로 생성)
+    const newSubmittedData = {
+      name: dataToSubmit.name,
+      phone: dataToSubmit.phone,
+      birthYear: dataToSubmit.birthYear,
+      church: dataToSubmit.church
+    };
+    
+    console.log('Setting submittedData:', newSubmittedData);
+    setSubmittedData(newSubmittedData);
+    
+    // 확인 창 표시
     setShowConfirmation(true);
   };
 
@@ -126,6 +172,7 @@ export default function Home() {
           birthYear: '',
           church: '',
         });
+        setSubmittedData(null);
         setIsEditMode(false);
       } else {
         // 서버에서 보낸 에러 메시지가 있으면 그대로 표시
@@ -140,12 +187,6 @@ export default function Home() {
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = event.target;
-    setFormData({ ...formData, [name]: value });
-    setSubmitStatus(null); // Clear status when user starts typing
   };
 
   return (
@@ -177,10 +218,8 @@ export default function Home() {
                   src={images.mainTitle}
                   alt="부모교사세미나" 
                   priority
-                  width={1000} 
-                  height={1000}
-                  sizes="100vw"
-                  className={styles.mainTitle}
+                  width={1200} 
+                  height={1200}
                 />
               </div>
             </div>
@@ -531,10 +570,10 @@ export default function Home() {
               <div className={styles.addressContainer}>
                 <motion.div 
                   className={styles.addressRow}
-                  initial={{ opacity: 0, x: -20 }}
+                  initial={{ opacity: 0, y: 20 }}
                   whileInView={{ 
                     opacity: 1, 
-                    x: 0,
+                    y: 0,
                     transition: { 
                       delay: 0.3,
                       duration: 0.5 
@@ -543,22 +582,24 @@ export default function Home() {
                   viewport={{ once: true }}
                 >
                   <span className={styles.placeName}>구미안디옥교회</span>
-                  <span className={styles.addressDetail}>경북 구미시 오태길 51</span>
-                  <motion.button 
-                    onClick={() => {
-                      navigator.clipboard.writeText('경북 구미시 오태길 51');
-                      alert('주소가 클립보드에 복사되었습니다.');
-                    }}
-                    className={styles.copyButton}
-                    aria-label="주소 복사"
-                    whileHover={{ scale: 1.03 }}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                    </svg>
-                  </motion.button>
+                  <div className={styles.addressDetailRow}>
+                    <span className={styles.addressDetail}>경북 구미시 오태길 51</span>
+                    <motion.button 
+                      onClick={() => {
+                        navigator.clipboard.writeText('경북 구미시 오태길 51');
+                        alert('주소가 클립보드에 복사되었습니다.');
+                      }}
+                      className={styles.copyButton}
+                      aria-label="주소 복사"
+                      whileHover={{ scale: 1.03 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                      </svg>
+                    </motion.button>
+                  </div>
                 </motion.div>
               </div>
               <motion.div 
@@ -600,10 +641,10 @@ export default function Home() {
               <div className={styles.addressContainer}>
                 <motion.div 
                   className={styles.addressRow}
-                  initial={{ opacity: 0, x: -20 }}
+                  initial={{ opacity: 0, y: 20 }}
                   whileInView={{ 
                     opacity: 1, 
-                    x: 0,
+                    y: 0,
                     transition: { 
                       delay: 0.3,
                       duration: 0.5 
@@ -612,22 +653,24 @@ export default function Home() {
                   viewport={{ once: true }}
                 >
                   <span className={styles.placeName}>서울안디옥교회</span>
-                  <span className={styles.addressDetail}>서울 강동구 천중로44길 28</span>
-                  <motion.button 
-                    onClick={() => {
-                      navigator.clipboard.writeText('서울 강동구 천중로44길 28');
-                      alert('주소가 클립보드에 복사되었습니다.');
-                    }}
-                    className={styles.copyButton}
-                    aria-label="주소 복사"
-                    whileHover={{ scale: 1.03 }}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                    </svg>
-                  </motion.button>
+                  <div className={styles.addressDetailRow}>
+                    <span className={styles.addressDetail}>서울 강동구 천중로44길 28</span>
+                    <motion.button 
+                      onClick={() => {
+                        navigator.clipboard.writeText('서울 강동구 천중로44길 28');
+                        alert('주소가 클립보드에 복사되었습니다.');
+                      }}
+                      className={styles.copyButton}
+                      aria-label="주소 복사"
+                      whileHover={{ scale: 1.03 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                      </svg>
+                    </motion.button>
+                  </div>
                 </motion.div>
               </div>
               <motion.div 
@@ -844,11 +887,9 @@ export default function Home() {
                     <input
                       type="tel"
                       id="phone"
+                      name="phone"
                       value={formData.phone}
-                      onChange={(e) => {
-                        setFormData({...formData, phone: e.target.value});
-                        setIsEditMode(false);
-                      }}
+                      onChange={handleChange}
                       placeholder="010-1234-5678"
                       required
                       className={styles.phoneInput}
@@ -872,15 +913,15 @@ export default function Home() {
                 <div className={styles.formGroup}>
                   <label htmlFor="birthYear">출생연도</label>
                   <input 
-                    type="number" 
-                    id="birthYear" 
+                    type="number"
+                    id="birthYear"
                     name="birthYear"
+                    value={formData.birthYear}
+                    onChange={handleChange}
                     min="1900" 
                     max={new Date().getFullYear()}
                     className={styles.formInput}
                     placeholder="출생연도 4자리를 입력해주세요 (예: 1990)"
-                    value={formData.birthYear}
-                    onChange={handleChange}
                     required 
                   />
                 </div>
@@ -941,10 +982,10 @@ export default function Home() {
                 >
                   <h3>입력하신 정보를 확인해주세요</h3>
                   <div className={styles.confirmationContent}>
-                    <p><strong>이름:</strong> {submittedData?.name}</p>
-                    <p><strong>휴대폰번호:</strong> {submittedData?.phone}</p>
-                    <p><strong>출생연도:</strong> {submittedData?.birthYear}</p>
-                    <p><strong>섬기는교회:</strong> {submittedData?.church}</p>
+                    <p><strong>이름:</strong> {submittedData.name || '입력 안 됨'}</p>
+                    <p><strong>휴대폰번호:</strong> {submittedData.phone || '입력 안 됨'}</p>
+                    <p><strong>출생연도:</strong> {submittedData.birthYear || '입력 안 됨'}</p>
+                    <p><strong>섬기는교회:</strong> {submittedData.church || '입력 안 됨'}</p>
                   </div>
                   <div className={styles.modalButtons}>
                     <button 
