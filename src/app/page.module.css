@@ -644,6 +644,7 @@
   max-width: 100%;
   margin: 0;
   padding: 1rem 0;
+  margin: 1rem auto 0;
 }
 
 .speakerRow {
@@ -968,9 +969,9 @@
 }
 
 .scheduleImage {
-  margin: 2rem 0;
   display: block;
   max-width: 100%;
+  margin: 1rem auto 0;
   height: auto;
   padding: 1rem 0;
 
@@ -999,7 +1000,7 @@
 
 .locationContent {
   max-width: 1200px; /* Increased from 1000px */
-  margin: 2rem auto 0;
+  margin: 1rem auto 0;
   padding: 0 1.5rem;
   width: 100%;
 }
@@ -1215,7 +1216,7 @@
   color: white;
   background-color: rgb(58,76,168);
   white-space: nowrap;
-  width: 120px;
+  width: 150px;
   text-align: center;
   padding: 0.75rem 1rem;
   font-size: 1.5rem;
@@ -1234,20 +1235,23 @@
 
 /* Account information cells */
 .accountCell {
-  padding: 0 !important;
+  gap: 0.5rem;
+  padding: 0.3rem 1rem;
   text-align: left;
 }
 
 .bankLocation {
   background-color: white;
   color: rgb(58,76,168);
-  padding: 0.5rem 1rem;
+  gap: 0.5rem;
+  padding: 0.3rem 1rem;
   font-weight: 700;
   text-align: left;
   border-bottom: 1px solid #f0f0f0;
-  font-size: 1.5rem;
+  font-size: 1.5rem!important;
   line-height: 1.3;
 }
+
 
 .accountRow {
   display: flex;
@@ -1256,6 +1260,7 @@
   padding: 0.3rem 1rem;
 }
 
+.feeText,
 .accountNumber {
   color: #333;
   text-align: left;
@@ -1308,6 +1313,86 @@
 }
 
 /* Contact information cells */
+/* Responsive font sizes for info table */
+.infoTable th {
+  background-color: #f8fafc;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.infoTable td {
+  color: #334155;
+}
+
+/* Mobile First Approach */
+@media (max-width: 480px) {
+  /* Adjust table column widths for mobile */
+  .infoTable th:first-child,
+  .infoTable td:first-child {
+    width: 20%;
+  }
+  
+  .infoTable th:not(:first-child),
+  .infoTable td:not(:first-child) {
+    width: auto;
+  }
+  
+  /* Ensure table cells don't wrap text */
+  .infoTable th,
+  .infoTable td {
+    white-space: nowrap;
+  }
+
+  .infoTable th {
+    font-size: 1rem !important;
+    padding: 0.4rem !important;
+  }
+
+  .infoTable,
+  .infoTable td,
+  .bankName,
+  .noticeCell,
+  .contactCell {
+    font-size: 0.9rem !important;
+    padding: 0.4rem !important;
+  }
+
+  .feeText,
+  .bankLocation,
+  .accountNumber,
+  .tableHeader {
+    font-size: 1.2rem !important;
+    padding: 0.4rem !important;
+  }
+
+  .accountRow {
+    padding: auto 0!important;  
+  }
+}
+
+/* Tablet */
+@media (min-width: 481px) and (max-width: 768px) {
+  .infoTable th {
+    font-size:1.2rem !important;
+  }
+  
+  .infoTable,
+  .infoTable td,
+  .bankName,
+  .noticeCell,
+  .contactCell {
+    font-size: 1.1rem !important;
+  }
+
+  .feeText,
+  .bankLocation,
+  .accountNumber,
+  .tableHeader {
+    font-size: 1.4rem !important;
+  }
+   
+}
+
 .contactCell {
   padding: 0.5rem 1rem;
   text-align: left;
@@ -1325,8 +1410,8 @@
 .formContainer {
   width: 100%;
   max-width: 1200px; /* Increased from 800px to match other sections */
-  margin: 2rem auto 0; /* Top margin only */
-  padding: 0 1.5rem;
+  margin: 1rem auto 0; /* Top margin only */
+  padding: 0 0.5rem;
   box-sizing: border-box;
 }
 
@@ -1342,6 +1427,7 @@
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
   width: 100%;
   box-sizing: border-box;
+  margin: 1rem auto 0;
 }
 
 .formGroup {
@@ -1384,27 +1470,26 @@
 }
 
 .checkButton {
-  padding: 0.75rem 1.25rem;
-  background-color: #4f46e5;
-  border: 1px solid #4f46e5;
-  border-radius: 0.5rem;
+  padding: 0.5rem 1rem;
+  background-color: rgba(58, 76, 168, 0.9);
+  border: none;
+  border-radius: 6px;
   color: white;
   font-weight: 500;
   cursor: pointer;
   white-space: nowrap;
   transition: all 0.2s;
-  opacity: 0.7;
-}
-
-.checkButton:hover:not(:disabled) {
-  background-color: #4338ca;
-  border-color: #4338ca;
-  opacity: 1;
+  font-size: 1.1rem;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .checkButton:disabled {
-  background-color: #e5e7eb;
-  border-color: #d1d5db;
+  background-color: #a0aec0;
+  opacity: 0.7;
+  cursor: not-allowed;
   color: #6b7280;
   cursor: not-allowed;
   opacity: 0.7;
@@ -1412,7 +1497,7 @@
 
 .phoneInput:not(:placeholder-shown) + .checkButton:not(:disabled) {
   opacity: 1;
-  background-color: #4f46e5;
+  background-color: rgb(58, 76, 168);;
   color: white;
 }
 
@@ -1513,11 +1598,6 @@
 .formInput:focus,
 .phoneInput:focus {
   outline: none;
-  border-color: #4f46e5;
-  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
-}
-
-.formInput:focus {
   border-color: rgb(58,76,168);
   box-shadow: 0 0 0 2px rgba(58,76,168,0.2);
 }
@@ -1549,27 +1629,38 @@
 }
 
 .submitButton {
-  display: block;
-  width: 100%;
-  padding: 1rem;
-  background-color: #4f46e5;
+  background-color: rgb(58, 76, 168);
   color: white;
   border: none;
-  border-radius: 0.5rem;
+  border-radius: 6px;
+  padding: 0.8rem 2.5rem;
   font-size: 1.1rem;
   font-weight: 600;
   cursor: pointer;
-  transition: background-color 0.2s;
-  margin-top: 1.5rem;
+  transition: all 0.2s ease;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.5rem;
+  height: 50px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 1rem;
 }
 
 .submitButton:hover:not(:disabled) {
-  background-color: #4338ca;
+  background-color: rgb(58, 76, 168);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
 }
 
 .submitButton:disabled {
-  background-color: #a5b4fc;
+  background-color: #a0aec0;
   cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+  opacity: 0.7;
 }
 
 .statusMessage {
@@ -1586,6 +1677,139 @@
   background-color: #e8f5e9;
   color: #2e7d32;
   border: 1px solid #a5d6a7;
+}
+
+.statusMessage.error {
+  background-color: #ffebee;
+  color: #c62828;
+  border: 1px solid #ef9a9a;
+}
+
+/* 모달 오버레이 */
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.75);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* 모달 컨테이너 */
+.modal {
+  background: white;
+  padding: 2.5rem;
+  border-radius: 16px;
+  width: 90%;
+  max-width: 500px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  transform: translateY(0);
+  animation: modalSlideUp 0.3s ease-out;
+  position: relative;
+  color: #333;
+}
+
+@keyframes modalSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 모달 제목 */
+.modal h3 {
+  margin: 0 0 1.5rem 0;
+  color: #1a365d;
+  font-size: 1.5rem;
+  font-weight: 700;
+  text-align: center;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #edf2f7;
+}
+
+/* 확인 내용 영역 */
+.confirmationContent {
+  margin: 1.5rem 0;
+  line-height: 1.8;
+  font-size: 1.1rem;
+}
+
+.confirmationContent p {
+  margin: 1rem 0;
+  padding: 0.75rem 1rem;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.confirmationContent strong {
+  color: #2d3748;
+  min-width: 80px;
+  display: inline-block;
+}
+
+/* 모달 버튼 컨테이너 */
+.modalButtons {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+/* 취소 버튼 */
+.cancelButton {
+  padding: 0.75rem 1.5rem;
+  background-color: #e2e8f0;
+  color: #4a5568;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 1rem;
+}
+
+.cancelButton:hover {
+  background-color: #cbd5e0;
+  transform: translateY(-1px);
+}
+
+/* 확인 버튼 */
+.submitButton {
+  padding: 0.75rem 2rem;
+  background: linear-gradient(135deg, #3182ce, #2b6cb0);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 1rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.submitButton:hover {
+  background: linear-gradient(135deg, #2b6cb0, #2c5282);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.submitButton:disabled {
+  background: #a0aec0;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
 
 .statusMessage.error {

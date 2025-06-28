@@ -1,9 +1,12 @@
 'use client';
 
 import { useState, useRef, useEffect, FormEvent } from 'react';
-import Head from 'next/head';
 import Image from 'next/image';
 import { motion, useInView, AnimatePresence, useAnimation } from 'framer-motion';
+import { getFirestore, collection, query, where, orderBy, limit, getDocs, addDoc, updateDoc, doc, DocumentData } from 'firebase/firestore';
+import firebasedb from '../../firebase/firebasedb';
+
+const db = getFirestore(firebasedb);
 import styles from './page.module.css';
 import images from './images';
 
@@ -12,9 +15,51 @@ interface FormData {
   phone: string;
   birthYear: string;
   church: string;
+  id?: string; // 기존 사용자 ID 저장용
+  isExistingUser?: boolean; // 기존 사용자 여부
+  [key: string]: any; // 인덱스 서명 추가
 }
 
 export default function Home() {
+  // 캐시 키 상수
+  const CACHE_KEY = 'antioch_user_cache';
+
+  // 세션 스토리지에서 캐시 로드
+  const loadCache = () => {
+    if (typeof window === 'undefined') return {};
+    const cached = sessionStorage.getItem(CACHE_KEY);
+    return cached ? JSON.parse(cached) : {};
+  };
+
+  // 세션 스토리지에 캐시 저장
+  const saveCache = (cache: any) => {
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem(CACHE_KEY, JSON.stringify(cache));
+    }
+  };
+
+  // 캐시에서 사용자 조회
+  const getUserFromCache = (phone: string) => {
+    const cache = loadCache();
+    return cache[phone];
+  };
+
+  // 캐시에 사용자 저장
+  const saveUserToCache = (phone: string, userData: any) => {
+    const cache = loadCache();
+    cache[phone] = userData;
+    saveCache(cache);
+  };
+
+  // 캐시에서 사용자 제거
+  const removeUserFromCache = (phone: string) => {
+    const cache = loadCache();
+    if (cache[phone] !== undefined) {
+      delete cache[phone];
+      saveCache(cache);
+    }
+  };
+
   const [showTitle, setShowTitle] = useState(false);
   
   useEffect(() => {
@@ -26,12 +71,17 @@ export default function Home() {
     return () => clearTimeout(timer);
   }, []);
 
+  // Add cache state
+  //const [userCache, setUserCache] = useState<{[key: string]: any}>({});
+
   const [formData, setFormData] = useState<FormData>({
     name: '',
     phone: '',
     birthYear: '',
     church: '',
   });
+  const [originalData, setOriginalData] = useState<FormData | null>(null); // 원본 데이터 저장
+  const [hasChanges, setHasChanges] = useState(false); // 변경사항 여부
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isChecking, setIsChecking] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<{ success: boolean; message: string } | null>(null);
@@ -45,76 +95,116 @@ export default function Home() {
     }
   }, [showConfirmation, submittedData]);
 
+  // 타입 안전한 객체 비교 함수
+  const hasObjectChanged = (obj1: any, obj2: any, excludeKeys: string[] = []): boolean => {
+    const keys = new Set([...Object.keys(obj1), ...Object.keys(obj2)]);
+    return Array.from(keys).some(key => {
+      if (excludeKeys.includes(key)) return false;
+      return obj1[key] !== obj2[key];
+    });
+  };
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    
+    setFormData(prev => {
+      const newData = { ...prev, [name]: value };
+      
+      // 기존 사용자인 경우에만 변경사항 감지
+      if (originalData) {
+        const changesDetected = hasObjectChanged(newData, originalData, ['id']);
+        setHasChanges(changesDetected);
+      }
+      
+      return newData;
+    });
     
     if (name === 'phone') {
       setIsEditMode(false);
+      setOriginalData(null);
+      setHasChanges(false);
     }
     
     // Clear status when user starts typing
     setSubmitStatus(null);
   };
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
     
     try {
-      console.log('Form submission started');
-      
-      // 현재 폼 데이터를 기반으로 새로운 객체 생성 (공백 제거)
-      const dataToSubmit = {
-        name: formData.name.trim(),
-        phone: formData.phone.trim(),
-        birthYear: formData.birthYear.trim(),
-        church: formData.church.trim()
-      };
-      
-      console.log('Form data prepared for submission:', {
-        ...dataToSubmit,
-        phone: dataToSubmit.phone ? `${dataToSubmit.phone.substring(0, 3)}-****-${dataToSubmit.phone.substring(7)}` : ''
-      });
-      
       // 필수 필드 검증
-      if (!dataToSubmit.name || !dataToSubmit.phone) {
-        const errorMsg = '이름과 휴대폰 번호는 필수 입력 항목입니다.';
-        console.warn('Validation failed:', errorMsg);
+      if (!formData.name || !formData.phone || !formData.birthYear || !formData.church) {
         setSubmitStatus({
           success: false,
-          message: errorMsg
+          message: '모든 필수 항목을 입력해주세요.'
         });
         return;
       }
       
-      // 휴대폰 번호 형식 검증 (숫자만 허용)
-      const phoneRegex = /^\d{10,11}$/;
-      if (!phoneRegex.test(dataToSubmit.phone.replace(/[^0-9]/g, ''))) {
-        const errorMsg = '올바른 휴대폰 번호를 입력해주세요. (숫자 10-11자리)';
-        console.warn('Phone validation failed:', dataToSubmit.phone);
+      // 휴대폰 번호 유효성 검사
+      const phoneRegex = /^[0-9]{10,11}$/;
+      const cleanPhone = formData.phone.replace(/[^0-9]/g, '');
+      
+      if (!phoneRegex.test(cleanPhone)) {
         setSubmitStatus({
           success: false,
-          message: errorMsg
+          message: '올바른 전화번호를 입력해주세요. (10-11자리 숫자)'
         });
         return;
       }
       
-      // 폼 상태 업데이트 (trimmed 값으로)
-      setFormData(dataToSubmit);
+      // 휴대폰 번호로 기존 사용자 확인
+      setIsChecking(true);
+      setSubmitStatus({ success: false, message: '기존 신청내역을 확인 중입니다...' });
       
-      // 제출 데이터 설정 (새로운 객체로 생성)
-      const newSubmittedData = { ...dataToSubmit };
-      
-      console.log('Setting submittedData for confirmation');
-      setSubmittedData(newSubmittedData);
-      
-      // 확인 창 표시
-      console.log('Showing confirmation dialog');
-      setShowConfirmation(true);
-      
+      try {
+        const existingUser = await checkPhoneInSheet(cleanPhone);
+        
+        if (existingUser) {
+          // 기존 사용자인 경우
+          const changesDetected = hasObjectChanged(formData, existingUser, ['id', 'isExistingUser']);
+          
+          if (!changesDetected) {
+            // 변경사항이 없는 경우
+            setSubmitStatus({
+              success: true,
+              message: '변경된 내용이 없습니다.'
+            });
+            return;
+          }
+          
+          // 변경사항이 있는 경우 확인 모달 표시
+          setSubmittedData({
+            ...formData,
+            phone: cleanPhone,
+            id: existingUser.id,
+            isExistingUser: true
+          });
+          setOriginalData(existingUser);
+          setHasChanges(true);
+          setShowConfirmation(true);
+        } else {
+          // 새 사용자인 경우
+          setSubmittedData({
+            ...formData,
+            phone: cleanPhone,
+            isExistingUser: false
+          });
+          setOriginalData(null);
+          setHasChanges(true);
+          setShowConfirmation(true);
+        }
+      } catch (error) {
+        console.error('사용자 확인 오류:', error);
+        setSubmitStatus({
+          success: false,
+          message: '사용자 확인 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.'
+        });
+        return;
+      } finally {
+        setIsChecking(false);
+      }
     } catch (error) {
       const errorMsg = '폼 처리 중 오류가 발생했습니다.';
       console.error('Error in form submission:', error);
@@ -124,18 +214,89 @@ export default function Home() {
       });
     }
   };
-
-  // API 기본 URL을 가져오는 함수
-  const getApiBaseUrl = (): string => {
-    // 개발 환경에서는 상대 경로 사용
-    if (process.env.NODE_ENV === 'development') {
-      return '';
+  
+  const confirmSubmission = async () => {
+    if (!submittedData) return;
+    
+    setIsSubmitting(true);
+    setShowConfirmation(false);
+    
+    try {
+      const cleanPhone = submittedData.phone.replace(/[^0-9]/g, '');
+      const baseUserData = {
+        name: submittedData.name,
+        phone: cleanPhone,
+        birthYear: submittedData.birthYear,
+        church: submittedData.church,
+      };
+      
+      const userDataWithTimestamp = {
+        ...baseUserData,
+        updatedAt: new Date().toISOString()
+      };
+  
+      let message = '';
+      
+      if (originalData?.id) {
+        // 기존 문서 업데이트
+        await updateDoc(doc(db, 'users', originalData.id), userDataWithTimestamp);
+        console.log('Document updated with ID: ', originalData.id);
+        message = '성공적으로 수정되었습니다!';
+        
+        // 캐시 업데이트
+        const updatedUser: FormData = { 
+          ...baseUserData,
+          id: originalData.id,
+          isExistingUser: true 
+        };
+        saveUserToCache(cleanPhone, updatedUser);
+        setOriginalData(updatedUser);
+      } else {
+        // 새 문서 추가
+        const docRef = await addDoc(collection(db, 'users'), {
+          ...userDataWithTimestamp,
+          createdAt: new Date().toISOString()
+        });
+        console.log('New document written with ID: ', docRef.id);
+        message = '신청이 완료되었습니다. 감사합니다!';
+        
+        // 캐시에 저장
+        const newUser: FormData = { 
+          ...baseUserData,
+          id: docRef.id,
+          isExistingUser: true 
+        };
+        saveUserToCache(cleanPhone, newUser);
+      }
+      
+      // 성공 메시지 표시
+      setSubmitStatus({
+        success: true,
+        message: message
+      });
+      
+      // 폼 초기화
+      setFormData({
+        name: '',
+        phone: '',
+        birthYear: '',
+        church: ''
+      });
+      setOriginalData(null);
+      setIsEditMode(false);
+      setHasChanges(false);
+      
+    } catch (error) {
+      console.error('Error saving to Firestore:', error);
+      setSubmitStatus({
+        success: false,
+        message: '제출 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.'
+      });
+    } finally {
+      setIsSubmitting(false);
     }
-    // 프로덕션 환경에서는 절대 경로 사용 (GitHub Pages용)
-    return 'https://antioch-seminar.web.app/';
   };
 
-  // 서버 사이드 API를 통해 Google Sheets 데이터 조회
   const checkPhoneInSheet = async (phone: string) => {
     try {
       console.log('=== checkPhoneInSheet 시작 ===');
@@ -145,73 +306,113 @@ export default function Home() {
         console.error('에러: 전화번호가 비어있습니다.');
         throw new Error('전화번호를 입력해주세요.');
       }
-      
-      // 전화번호에서 숫자만 추출
-      const cleanPhone = phone.replace(/[^0-9+]/g, '');
+  
+      const cleanPhone = phone.replace(/[^0-9]/g, '');
       console.log('정제된 전화번호:', cleanPhone);
       
-      // 요청 본문 생성
-      const requestBody = { 
-        phone: cleanPhone,
-        phoneNumber: cleanPhone // 호환성을 위해 두 필드 모두 전송
-      };
-      console.log('요청 본문:', JSON.stringify(requestBody, null, 2));
-      
-      // API 호출
-      console.log('API 호출 시작:', '/api/check');
-      const startTime = Date.now();
-      const response = await fetch('/api/check', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'same-origin',
-        body: JSON.stringify(requestBody),
-      });
-
-      if (!response.ok) {
-        const error = await response.text();
-        console.error('서버 오류:', error);
-        throw new Error('서버에서 오류가 발생했습니다.');
+      if (cleanPhone.length < 10 || cleanPhone.length > 11) {
+        throw new Error('올바른 전화번호를 입력해주세요.');
       }
-    
-      const endTime = Date.now();
-      console.log(`API 응답 수신 (${endTime - startTime}ms)`, {
-        status: response.status,
-        statusText: response.statusText,
-        headers: Object.fromEntries(response.headers.entries())
-      });
       
-      const result = await response.json().catch(error => {
-        console.error('JSON 파싱 오류:', error);
-        throw new Error('서버 응답을 처리할 수 없습니다.');
-      });
+      // 캐시 확인
+      const cachedUser = getUserFromCache(cleanPhone);
+      if (cachedUser !== undefined) {
+        console.log('세션 캐시에서 사용자 데이터 불러옴');
+        
+        if (cachedUser) {
+          // 캐시에 데이터가 있는 경우
+          const userData = {
+            name: cachedUser.name || '',
+            phone: cleanPhone,
+            birthYear: cachedUser.birthYear || '',
+            church: cachedUser.church || '',
+            id: cachedUser.id,
+            isExistingUser: true
+          };
+          
+          setFormData(userData);
+          setOriginalData(userData);
+          setIsEditMode(true);
+          setHasChanges(false);
+          
+          setSubmitStatus({
+            success: true,
+            message: '기존 신청 정보를 불러왔습니다. 수정 후 제출해주세요.'
+          });
+          return userData;
+        } else {
+          // 캐시에 null이 저장된 경우 (사용자 없음)
+          setFormData(prev => ({
+            ...prev,
+            phone: cleanPhone,
+            isExistingUser: false
+          }));
+          setOriginalData(null);
+          setIsEditMode(false);
+          setHasChanges(true);
+          
+          setSubmitStatus({
+            success: true,
+            message: '새로운 신청자입니다. 정보를 입력해주세요.'
+          });
+          return null;
+        }
+      }
+  
+      // Firestore에서 사용자 조회
+      const usersRef = collection(db, 'users');
+      const q = query(usersRef, where('phone', '==', cleanPhone), limit(1));
+      const querySnapshot = await getDocs(q);
       
-      console.log('API 응답 데이터:', JSON.stringify(result, null, 2));
-      
-      if (!response.ok) {
-        console.error('API 오류 응답:', {
-          status: response.status,
-          statusText: response.statusText,
-          error: result
+      if (!querySnapshot.empty) {
+        const doc = querySnapshot.docs[0];
+        const userData = {
+          ...doc.data(),
+          id: doc.id,
+          isExistingUser: true
+        } as FormData;
+        
+        // 캐시에 저장
+        saveUserToCache(cleanPhone, userData);
+        
+        // 폼에 데이터 설정
+        setFormData(userData);
+        setOriginalData(userData);
+        setIsEditMode(true);
+        setHasChanges(false);
+        
+        setSubmitStatus({
+          success: true,
+          message: '기존 신청 정보를 불러왔습니다. 수정 후 제출해주세요.'
         });
-        throw new Error(result.error || '서버에서 오류가 발생했습니다.');
-      }
-      
-      if (result.success && result.data) {
-        console.log('사용자 데이터 조회 성공');
-        return {
-          name: result.data.name || '',
-          phone: result.data.phone || '',
-          birthYear: result.data.birthYear || '',
-          church: result.data.church || '',
-        };
+        
+        return userData;
       } else {
-        console.log('일치하는 전화번호를 찾을 수 없습니다.');
+        // 사용자가 없는 경우
+        saveUserToCache(cleanPhone, null);
+        
+        setFormData(prev => ({
+          ...prev,
+          phone: cleanPhone,
+          isExistingUser: false
+        }));
+        setOriginalData(null);
+        setIsEditMode(false);
+        setHasChanges(true);
+        
+        setSubmitStatus({
+          success: true,
+          message: '새로운 신청자입니다. 정보를 입력해주세요.'
+        });
+        
         return null;
       }
     } catch (error) {
-      console.error('사용자 조회 중 오류:', error);
+      console.error('전화번호 확인 오류:', error);
+      setSubmitStatus({
+        success: false,
+        message: '조회 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.'
+      });
       throw error;
     }
   };
@@ -226,31 +427,11 @@ export default function Home() {
     }
 
     setIsChecking(true);
+    setSubmitStatus({ success: false, message: '조회 중입니다...' });
+
     try {
-      console.log('전화번호 확인 요청:', formData.phone);
-      
-      // 클라이언트 사이드에서 직접 Google Sheets API 호출
-      const existingData = await checkPhoneInSheet(formData.phone);
-      
-      if (existingData) {
-        // 기존 데이터로 폼 채우기
-        setFormData({
-          name: existingData.name || '',
-          phone: existingData.phone || '',
-          birthYear: existingData.birthYear || '',
-          church: existingData.church || '',
-        });
-        setIsEditMode(true);
-        setSubmitStatus({
-          success: true,
-          message: '기존 신청 내역을 불러왔습니다. 수정 후 제출해주세요.'
-        });
-      } else {
-        setSubmitStatus({
-          success: false,
-          message: '등록된 신청 내역이 없습니다. 새로 작성해주세요.'
-        });
-      }
+      await checkPhoneInSheet(formData.phone);
+      // checkPhoneInSheet 내에서 이미 상태 업데이트 및 폼 채우기 처리됨
     } catch (error) {
       console.error('전화번호 확인 오류:', error);
       setSubmitStatus({
@@ -259,111 +440,6 @@ export default function Home() {
       });
     } finally {
       setIsChecking(false);
-    }
-  };
-
-  const confirmSubmission = async () => {
-    if (!submittedData) {
-      console.error('No submitted data available');
-      return;
-    }
-    
-    console.log('Starting form submission with data:', {
-      ...submittedData,
-      phone: submittedData.phone ? `${submittedData.phone.substring(0, 3)}-****-${submittedData.phone.substring(7)}` : ''
-    });
-    
-    setIsSubmitting(true);
-    setShowConfirmation(false);
-    
-    try {
-      console.log('Sending request to /api/submit');
-      const startTime = Date.now();
-      
-      const apiUrl = '/api/submit';
-      console.log('Submit API 요청 URL:', apiUrl);
-      
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          ...submittedData,
-          timestamp: new Date().toISOString(),
-        }),
-      });
-
-      const responseTime = Date.now() - startTime;
-      console.log(`API response received in ${responseTime}ms`, {
-        status: response.status,
-        ok: response.ok
-      });
-
-      let result;
-      try {
-        result = await response.json();
-        console.log('API response data:', result);
-      } catch (jsonError) {
-        console.error('Failed to parse JSON response:', jsonError);
-        throw new Error('서버 응답을 처리하는 중 오류가 발생했습니다.');
-      }
-
-      if (response.ok) {
-        const successMessage = result.isUpdate 
-          ? '신청 정보가 수정되었습니다.' 
-          : '신청이 완료되었습니다. 감사합니다!';
-        
-        console.log('Form submission successful:', successMessage);
-        
-        setSubmitStatus({
-          success: true,
-          message: successMessage,
-        });
-        
-        // 폼 초기화
-        const resetForm = {
-          name: '',
-          phone: '',
-          birthYear: '',
-          church: '',
-        };
-        
-        setFormData(resetForm);
-        setSubmittedData(null);
-        setIsEditMode(false);
-        
-        console.log('Form has been reset');
-      } else {
-        // 서버에서 보낸 에러 메시지가 있으면 그대로 표시
-        const errorMessage = result.message || `서버 오류 (${response.status})`;
-        console.error('Server error:', {
-          status: response.status,
-          message: errorMessage,
-          response: result
-        });
-        throw new Error(errorMessage);
-      }
-    } catch (error) {
-      const errorMessage = error instanceof Error 
-        ? error.message 
-        : '오류가 발생했습니다. 잠시 후 다시 시도해주세요.';
-      
-      console.error('Error in form submission:', {
-        error,
-        message: errorMessage
-      });
-      
-      setSubmitStatus({
-        success: false,
-        message: errorMessage,
-      });
-      
-      // 오류 발생 시 확인 창 다시 표시
-      setShowConfirmation(true);
-    } finally {
-      setIsSubmitting(false);
-      console.log('Form submission process completed');
     }
   };
 
@@ -930,7 +1006,7 @@ export default function Home() {
                 <tbody>
                   <tr>
                     <th className={styles.tableHeader}>회비</th>
-                    <td>3만원(초·중·고 2만원)</td>
+                    <td><span className={styles.feeText}>3만원(초·중·고 2만원)</span></td>
                   </tr>
                   <tr>
                     <th rowSpan={3} className={styles.tableHeader}>등록계좌</th>
@@ -1045,21 +1121,7 @@ export default function Home() {
               viewport={{ once: true }}
             >
               <form className={styles.applicationForm} onSubmit={handleSubmit}>
-                <div className={styles.formGroup}>
-                  <label htmlFor="name">이름</label>
-                  <input 
-                    type="text" 
-                    id="name" 
-                    name="name"
-                    className={styles.formInput}
-                    placeholder="이름을 입력해주세요"
-                    value={formData.name}
-                    onChange={handleChange}
-                    required 
-                  />
-                </div>
-                
-                <div className={styles.formGroup}>
+              <div className={styles.formGroup}>
                   <label htmlFor="phone">휴대폰번호 *</label>
                   <div className={styles.phoneInputContainer}>
                     <input
@@ -1079,14 +1141,30 @@ export default function Home() {
                       disabled={!formData.phone || isChecking}
                       className={styles.checkButton}
                     >
-                      {isChecking ? '조회 중...' : '조회'}
+                      {isChecking ? '조회 중...' : '신청확인'}
                     </button>
                   </div>
                   {isEditMode && (
                     <p className={styles.editNotice}>
-                      기존 신청 내역이 있습니다. 수정 후 제출해주세요.
+                      {hasChanges 
+                        ? '변경사항이 감지되었습니다.' 
+                        : '기존 신청 내역이 있습니다. 수정 후 제출해주세요.'}
                     </p>
                   )}
+                </div>
+
+                <div className={styles.formGroup}>
+                  <label htmlFor="name">이름</label>
+                  <input 
+                    type="text" 
+                    id="name" 
+                    name="name"
+                    className={styles.formInput}
+                    placeholder="이름을 입력해주세요"
+                    value={formData.name}
+                    onChange={handleChange}
+                    required 
+                  />
                 </div>
                 
                 <div className={styles.formGroup}>
@@ -1125,19 +1203,22 @@ export default function Home() {
                   </div>
                 )}
                 
-                <button 
-                  type="submit" 
-                  disabled={isSubmitting}
-                  className={styles.submitButton}
-                >
-                  {isSubmitting ? '제출 중...' : isEditMode ? '수정하기' : '신청하기'}
-                </button>
+                <div className={styles.formGroup}>
+                  <button 
+                    type="submit" 
+                    className={`${styles.submitButton} ${isSubmitting ? styles.loading : ''}`}
+                    disabled={isSubmitting || (originalData !== null && !hasChanges)}
+                  >
+                    {isSubmitting ? '처리 중...' : originalData !== null ? '수정하기' : '신청하기'}
+                  </button>
+                </div>
               </form>
             </motion.div>
           </motion.section>
         </div>
       </main>
 
+          {/* Footer */}
           {/* 확인 모달 */}
           <AnimatePresence>
             {showConfirmation && submittedData && (

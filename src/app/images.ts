@@ -16,6 +16,8 @@ import Logo2 from '../../public/images/주최로고.png';
 import Icon from '../../public/images/favicon.ico';
 import OG from '../../public/images/OG.jpg';
 
+export const OGImage = OG;
+
 const images = {
   background: BackgroundImage,
   mainTitle: MainTitle,

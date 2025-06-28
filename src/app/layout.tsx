@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import images from './images';
+import images, { OGImage } from './images';
 
 // Pretendard 폰트 로드
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
@@ -27,16 +27,16 @@ export const metadata: Metadata = {
   openGraph: {
     title: "부모교사세미나 - 성경적 세계관 교육",
     description: "안디옥교회에서 진행하는 부모교사세미나에 초대합니다.",
-    url: "https://antioch.web.app/parent-teacher-seminar",
-    siteName: "안디옥교회",
+    url: "https://antioch-seminar.web.app/",
     images: [
       {
-        url: images.og.src,
+        url: 'https://antioch-seminar.web.app/images/OG.jpg',
         width: 1200,
         height: 630,
-        alt: "부모교사세미나",
+        alt: '부모교사세미나 - 성경적 세계관 교육',
       },
     ],
+    siteName: "안디옥교회",
     locale: "ko_KR",
     type: "website",
   },
@@ -44,7 +44,14 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "부모교사세미나 - 성경적 세계관 교육",
     description: "안디옥교회에서 진행하는 부모교사세미나에 초대합니다.",
-    images: images.og.src,
+    images: [
+      {
+        url: 'https://antioch-seminar.web.app/images/OG.jpg',
+        width: 1200,
+        height: 630,
+        alt: '부모교사세미나 - 성경적 세계관 교육',
+      },
+    ],
   },
 };
 
