@@ -55,8 +55,10 @@ jobs:
           cache-dependency-path: ./package-lock.json
 
       - name: Install dependencies
-        run: pnpm install
-
+        run: |
+          pnpm install
+          pnpm add google-auth-library
+      
       - name: Build with Next.js
         run: pnpm next build
 
