@@ -63,32 +63,83 @@ export default function Home() {
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     
-    // 현재 폼 데이터를 기반으로 새로운 객체 생성 (공백 제거)
-    const dataToSubmit = {
-      name: formData.name.trim(),
-      phone: formData.phone.trim(),
-      birthYear: formData.birthYear.trim(),
-      church: formData.church.trim()
-    };
+    try {
+      console.log('Form submission started');
+      
+      // 현재 폼 데이터를 기반으로 새로운 객체 생성 (공백 제거)
+      const dataToSubmit = {
+        name: formData.name.trim(),
+        phone: formData.phone.trim(),
+        birthYear: formData.birthYear.trim(),
+        church: formData.church.trim()
+      };
+      
+      console.log('Form data prepared for submission:', {
+        ...dataToSubmit,
+        phone: dataToSubmit.phone ? `${dataToSubmit.phone.substring(0, 3)}-****-${dataToSubmit.phone.substring(7)}` : ''
+      });
+      
+      // 필수 필드 검증
+      if (!dataToSubmit.name || !dataToSubmit.phone) {
+        const errorMsg = '이름과 휴대폰 번호는 필수 입력 항목입니다.';
+        console.warn('Validation failed:', errorMsg);
+        setSubmitStatus({
+          success: false,
+          message: errorMsg
+        });
+        return;
+      }
+      
+      // 휴대폰 번호 형식 검증 (숫자만 허용)
+      const phoneRegex = /^\d{10,11}$/;
+      if (!phoneRegex.test(dataToSubmit.phone.replace(/[^0-9]/g, ''))) {
+        const errorMsg = '올바른 휴대폰 번호를 입력해주세요. (숫자 10-11자리)';
+        console.warn('Phone validation failed:', dataToSubmit.phone);
+        setSubmitStatus({
+          success: false,
+          message: errorMsg
+        });
+        return;
+      }
+      
+      // 폼 상태 업데이트 (trimmed 값으로)
+      setFormData(dataToSubmit);
+      
+      // 제출 데이터 설정 (새로운 객체로 생성)
+      const newSubmittedData = { ...dataToSubmit };
+      
+      console.log('Setting submittedData for confirmation');
+      setSubmittedData(newSubmittedData);
+      
+      // 확인 창 표시
+      console.log('Showing confirmation dialog');
+      setShowConfirmation(true);
+      
+    } catch (error) {
+      const errorMsg = '폼 처리 중 오류가 발생했습니다.';
+      console.error('Error in form submission:', error);
+      setSubmitStatus({
+        success: false,
+        message: errorMsg
+      });
+    }
+  };
+
+  const getApiBaseUrl = () => {
+    // 환경 변수에서 API 기본 URL 사용
+    if (process.env.NEXT_PUBLIC_API_BASE_URL) {
+      return process.env.NEXT_PUBLIC_API_BASE_URL;
+    }
     
-    console.log('Submitting form data:', dataToSubmit);
+    // 개발 환경에서는 상대 경로 사용
+    if (process.env.NODE_ENV === 'development') {
+      return '/api';
+    }
     
-    // 폼 상태 업데이트
-    setFormData(dataToSubmit);
-    
-    // 제출 데이터 설정 (새로운 객체로 생성)
-    const newSubmittedData = {
-      name: dataToSubmit.name,
-      phone: dataToSubmit.phone,
-      birthYear: dataToSubmit.birthYear,
-      church: dataToSubmit.church
-    };
-    
-    console.log('Setting submittedData:', newSubmittedData);
-    setSubmittedData(newSubmittedData);
-    
-    // 확인 창 표시
-    setShowConfirmation(true);
+    // 프로덕션 환경에서의 기본 경로
+    // GitHub Pages는 서버 사이드 API를 지원하지 않으므로, 별도의 API 서버가 필요합니다.
+    // 아래 주소를 실제 API 서버 주소로 변경해주세요.
+    return 'https://obedlee.github.io/Antioch/api';
   };
 
   const handleCheckPhone = async () => {
@@ -102,15 +153,24 @@ export default function Home() {
 
     setIsChecking(true);
     try {
-      const response = await fetch('/api/check', {
+      const apiUrl = `${getApiBaseUrl()}/check`;
+      console.log('API 요청 URL:', apiUrl);
+      
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ phone: formData.phone }),
+        credentials: 'same-origin', // 쿠키가 필요한 경우
       });
 
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
       const result = await response.json();
+      console.log('API 응답:', result);
 
       if (result.success && result.exists) {
         // 기존 데이터로 폼 채우기
@@ -142,13 +202,27 @@ export default function Home() {
   };
 
   const confirmSubmission = async () => {
-    if (!submittedData) return;
+    if (!submittedData) {
+      console.error('No submitted data available');
+      return;
+    }
+    
+    console.log('Starting form submission with data:', {
+      ...submittedData,
+      phone: submittedData.phone ? `${submittedData.phone.substring(0, 3)}-****-${submittedData.phone.substring(7)}` : ''
+    });
     
     setIsSubmitting(true);
     setShowConfirmation(false);
     
     try {
-      const response = await fetch('/api/submit', {
+      console.log('Sending request to /api/submit');
+      const startTime = Date.now();
+      
+      const apiUrl = `${getApiBaseUrl()}/submit`;
+      console.log('Submit API 요청 URL:', apiUrl);
+      
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -159,33 +233,76 @@ export default function Home() {
         }),
       });
 
-      const result = await response.json();
+      const responseTime = Date.now() - startTime;
+      console.log(`API response received in ${responseTime}ms`, {
+        status: response.status,
+        ok: response.ok
+      });
+
+      let result;
+      try {
+        result = await response.json();
+        console.log('API response data:', result);
+      } catch (jsonError) {
+        console.error('Failed to parse JSON response:', jsonError);
+        throw new Error('서버 응답을 처리하는 중 오류가 발생했습니다.');
+      }
 
       if (response.ok) {
+        const successMessage = result.isUpdate 
+          ? '신청 정보가 수정되었습니다.' 
+          : '신청이 완료되었습니다. 감사합니다!';
+        
+        console.log('Form submission successful:', successMessage);
+        
         setSubmitStatus({
           success: true,
-          message: result.isUpdate ? '신청 정보가 수정되었습니다.' : '신청이 완료되었습니다. 감사합니다!',
+          message: successMessage,
         });
-        setFormData({
+        
+        // 폼 초기화
+        const resetForm = {
           name: '',
           phone: '',
           birthYear: '',
           church: '',
-        });
+        };
+        
+        setFormData(resetForm);
         setSubmittedData(null);
         setIsEditMode(false);
+        
+        console.log('Form has been reset');
       } else {
         // 서버에서 보낸 에러 메시지가 있으면 그대로 표시
-        const errorMessage = result.message || '제출에 실패했습니다.';
+        const errorMessage = result.message || `서버 오류 (${response.status})`;
+        console.error('Server error:', {
+          status: response.status,
+          message: errorMessage,
+          response: result
+        });
         throw new Error(errorMessage);
       }
     } catch (error) {
+      const errorMessage = error instanceof Error 
+        ? error.message 
+        : '오류가 발생했습니다. 잠시 후 다시 시도해주세요.';
+      
+      console.error('Error in form submission:', {
+        error,
+        message: errorMessage
+      });
+      
       setSubmitStatus({
         success: false,
-        message: error instanceof Error ? error.message : '오류가 발생했습니다. 잠시 후 다시 시도해주세요.',
+        message: errorMessage,
       });
+      
+      // 오류 발생 시 확인 창 다시 표시
+      setShowConfirmation(true);
     } finally {
       setIsSubmitting(false);
+      console.log('Form submission process completed');
     }
   };
 
