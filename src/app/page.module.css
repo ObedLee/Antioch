@@ -522,6 +522,10 @@
     overflow: hidden;
     text-overflow: ellipsis;
   }
+
+  .footerLogo {
+    height: 55px;
+  }
 }
 
 @media (max-width: 480px) {
@@ -544,6 +548,10 @@
   
   .copyButton {
     flex-shrink: 0;
+  }
+  
+  .footerLogo {
+    height: 45px;
   }
   
 }

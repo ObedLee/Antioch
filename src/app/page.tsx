@@ -885,11 +885,12 @@ export default function Home() {
                   <label htmlFor="phone">휴대폰번호 *</label>
                   <div className={styles.phoneInputContainer}>
                     <input
-                      type="tel"
+                      type="text"
                       id="phone"
                       name="phone"
                       value={formData.phone}
                       onChange={handleChange}
+                      inputMode="text"
                       placeholder="010-1234-5678"
                       required
                       className={styles.phoneInput}
