@@ -138,17 +138,34 @@ export default function Home() {
   // 서버 사이드 API를 통해 Google Sheets 데이터 조회
   const checkPhoneInSheet = async (phone: string) => {
     try {
-      console.log('전화번호 확인 요청 (서버사이드 API 호출)');
+      console.log('=== checkPhoneInSheet 시작 ===');
+      console.log('입력된 전화번호:', phone);
       
-      const requestBody = { phoneNumber: phone };
-      console.log('Sending request to /api/check with body:', JSON.stringify(requestBody, null, 2));
+      if (!phone) {
+        console.error('에러: 전화번호가 비어있습니다.');
+        throw new Error('전화번호를 입력해주세요.');
+      }
       
-      // 클라이언트 사이드에서 서버 API 호출
+      // 전화번호에서 숫자만 추출
+      const cleanPhone = phone.replace(/[^0-9+]/g, '');
+      console.log('정제된 전화번호:', cleanPhone);
+      
+      // 요청 본문 생성
+      const requestBody = { 
+        phone: cleanPhone,
+        phoneNumber: cleanPhone // 호환성을 위해 두 필드 모두 전송
+      };
+      console.log('요청 본문:', JSON.stringify(requestBody, null, 2));
+      
+      // API 호출
+      console.log('API 호출 시작:', '/api/check');
+      const startTime = Date.now();
       const response = await fetch('/api/check', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'same-origin',
         body: JSON.stringify(requestBody),
       });
 
@@ -157,9 +174,29 @@ export default function Home() {
         console.error('서버 오류:', error);
         throw new Error('서버에서 오류가 발생했습니다.');
       }
-
-      const result = await response.json();
-      console.log('API 응답:', result);
+    
+      const endTime = Date.now();
+      console.log(`API 응답 수신 (${endTime - startTime}ms)`, {
+        status: response.status,
+        statusText: response.statusText,
+        headers: Object.fromEntries(response.headers.entries())
+      });
+      
+      const result = await response.json().catch(error => {
+        console.error('JSON 파싱 오류:', error);
+        throw new Error('서버 응답을 처리할 수 없습니다.');
+      });
+      
+      console.log('API 응답 데이터:', JSON.stringify(result, null, 2));
+      
+      if (!response.ok) {
+        console.error('API 오류 응답:', {
+          status: response.status,
+          statusText: response.statusText,
+          error: result
+        });
+        throw new Error(result.error || '서버에서 오류가 발생했습니다.');
+      }
       
       if (result.success && result.data) {
         console.log('사용자 데이터 조회 성공');
