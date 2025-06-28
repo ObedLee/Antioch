@@ -56,9 +56,9 @@ jobs:
 
       - name: 환경 변수를 설정합니다.
         run: |
-          echo "GOOGLE_SHEETS_CLIENT_EMAIL=$GOOGLE_SHEETS_CLIENT_EMAIL" >> .env
-          echo "GOOGLE_SHEETS_PRIVATE_KEY=$GOOGLE_SHEETS_PRIVATE_KEY" >> .env
-          echo "GOOGLE_SHEETS_SPREADSHEET_ID=$GOOGLE_SHEETS_SPREADSHEET_ID" >> .env
+          echo "GOOGLE_SHEETS_CLIENT_EMAIL=${{ secrets.GOOGLE_SHEETS_CLIENT_EMAIL }}" >> .env
+          echo "GOOGLE_SHEETS_PRIVATE_KEY=${{ secrets.GOOGLE_SHEETS_PRIVATE_KEY }}" >> .env
+          echo "GOOGLE_SHEETS_SPREADSHEET_ID=${{ secrets.GOOGLE_SHEETS_SPREADSHEET_ID }}" >> .env
         env:
           GOOGLE_SHEETS_CLIENT_EMAIL: ${{ secrets.GOOGLE_SHEETS_CLIENT_EMAIL }}
           GOOGLE_SHEETS_PRIVATE_KEY: ${{ secrets.GOOGLE_SHEETS_PRIVATE_KEY }}     
