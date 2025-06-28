@@ -54,14 +54,24 @@ jobs:
           cache: "pnpm"
           cache-dependency-path: ./package-lock.json
 
-      - name: 환경 변수를 설정합니다.
+      - name: 환경 변수 설정 및 확인
         run: |
+          # .env 파일에 환경 변수 쓰기
           echo "GOOGLE_SHEETS_CLIENT_EMAIL=${{ secrets.GOOGLE_SHEETS_CLIENT_EMAIL }}" >> .env
           echo "GOOGLE_SHEETS_PRIVATE_KEY=${{ secrets.GOOGLE_SHEETS_PRIVATE_KEY }}" >> .env
           echo "GOOGLE_SHEETS_SPREADSHEET_ID=${{ secrets.GOOGLE_SHEETS_SPREADSHEET_ID }}" >> .env
+          
+          # 환경 변수 확인을 위한 디버그 로그
+          echo "===== 환경 변수 확인 ====="
+          echo "CLIENT_EMAIL 길이: ${#GOOGLE_SHEETS_CLIENT_EMAIL}"
+          echo "SPREADSHEET_ID: $GOOGLE_SHEETS_SPREADSHEET_ID"
+          echo "PRIVATE_KEY 길이: ${#GOOGLE_SHEETS_PRIVATE_KEY}"
+          echo "===== .env 파일 내용 ====="
+          cat .env
+          echo "========================="
         env:
           GOOGLE_SHEETS_CLIENT_EMAIL: ${{ secrets.GOOGLE_SHEETS_CLIENT_EMAIL }}
-          GOOGLE_SHEETS_PRIVATE_KEY: ${{ secrets.GOOGLE_SHEETS_PRIVATE_KEY }}     
+          GOOGLE_SHEETS_PRIVATE_KEY: ${{ secrets.GOOGLE_SHEETS_PRIVATE_KEY }}
           GOOGLE_SHEETS_SPREADSHEET_ID: ${{ secrets.GOOGLE_SHEETS_SPREADSHEET_ID }}  
 
       - name: Install dependencies
