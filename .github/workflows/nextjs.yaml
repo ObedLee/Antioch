@@ -54,6 +54,17 @@ jobs:
           cache: "pnpm"
           cache-dependency-path: ./package-lock.json
 
+      - name: 환경 변수 설정
+        run: |
+          # .env 파일 생성
+          echo "GOOGLE_SHEETS_CLIENT_EMAIL=${{ secrets.GOOGLE_SHEETS_CLIENT_EMAIL }}" > .env
+          echo "GOOGLE_SHEETS_PRIVATE_KEY=${{ secrets.GOOGLE_SHEETS_PRIVATE_KEY }}" >> .env
+          echo "GOOGLE_SHEETS_SPREADSHEET_ID=${{ secrets.GOOGLE_SHEETS_SPREADSHEET_ID }}" >> .env
+        env:
+          GOOGLE_SHEETS_CLIENT_EMAIL: ${{ secrets.GOOGLE_SHEETS_CLIENT_EMAIL }}
+          GOOGLE_SHEETS_PRIVATE_KEY: ${{ secrets.GOOGLE_SHEETS_PRIVATE_KEY }}
+          GOOGLE_SHEETS_SPREADSHEET_ID: ${{ secrets.GOOGLE_SHEETS_SPREADSHEET_ID }}
+
       - name: 환경 변수 디버그 정보 출력
         run: |
           echo "===== 환경 변수 정보 (보안상 값은 표시되지 않음) ====="
@@ -68,7 +79,7 @@ jobs:
         env:
           GOOGLE_SHEETS_CLIENT_EMAIL: ${{ secrets.GOOGLE_SHEETS_CLIENT_EMAIL }}
           GOOGLE_SHEETS_PRIVATE_KEY: ${{ secrets.GOOGLE_SHEETS_PRIVATE_KEY }}
-          GOOGLE_SHEETS_SPREADSHEET_ID: ${{ secrets.GOOGLE_SHEETS_SPREADSHEET_ID }} 
+          GOOGLE_SHEETS_SPREADSHEET_ID: ${{ secrets.GOOGLE_SHEETS_SPREADSHEET_ID }}
 
       - name: Install dependencies
         run: |
