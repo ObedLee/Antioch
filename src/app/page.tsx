@@ -132,7 +132,7 @@ export default function Home() {
       return '';
     }
     // 프로덕션 환경에서는 절대 경로 사용 (GitHub Pages용)
-    return 'https://obedlee.github.io/antioch-seminar';
+    return 'https://antioch-seminar.web.app/';
   };
 
   // 서버 사이드 API를 통해 Google Sheets 데이터 조회

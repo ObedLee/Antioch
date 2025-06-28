@@ -1,18 +1,17 @@
 {
   "name": "antioch-seminar",
-  "homepage": "https://obedlee.github.io/Antioch/",
+  "homepage": "https://antioch-seminar.web.app/",
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "predeploy": "npm run build",
-    "deploy": "echo.> out/.nojekyll && gh-pages -d out --dotfiles"
+    "build": "next build && next export",
+    "deploy": "npm run build && firebase deploy"
   },
   "dependencies": {
     "@google-cloud/local-auth": "^3.0.1",
     "@nestjs/config": "^4.0.2",
     "dotenv": "^16.6.0",
+    "firebase": "^11.9.1",
     "framer-motion": "^12.19.2",
     "google-auth-library": "^10.1.0",
     "google-spreadsheet": "^4.1.4",

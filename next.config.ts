@@ -1,16 +1,10 @@
-// GitHub Pages에 배포할 때는 basePath를 설정해야 합니다.
-// 로컬 개발 시에는 basePath를 비워두고, 프로덕션 빌드 시에만 적용됩니다.
 const isProd = process.env.NODE_ENV === 'production';
-const repositoryName = 'antioch-seminar'; // GitHub 저장소 이름
 
 const nextConfig = {
   // 정적 내보내기 설정
   output: 'export',
   
-  // GitHub Pages에서 서브 디렉토리에 배포할 때 필요
-  basePath: isProd ? `/${repositoryName}` : '',
-  assetPrefix: isProd ? `/${repositoryName}/` : '',
-  
+
   // 이미지 최적화 비활성화 (정적 내보내기 시 필요)
   images: {
     unoptimized: true,
@@ -23,7 +17,7 @@ const nextConfig = {
       return [
         {
           source: '/api/:path*',
-          destination: 'https://github.com/ObedLee/Antioch/api/:path*', // 실제 API 서버 주소로 변경 필요
+          destination: 'https://antioch-seminar.web.app//api/:path*', // 실제 API 서버 주소로 변경 필요
         },
       ];
     }
@@ -41,7 +35,7 @@ const nextConfig = {
     
     // 클라이언트 측에서 사용할 환경 변수
     NEXT_PUBLIC_API_BASE_URL: isProd 
-      ? `https://github.com/ObedLee/Antioch/api` 
+      ? `https://antioch-seminar.web.app//api` 
       : '/api',
   },
 };
