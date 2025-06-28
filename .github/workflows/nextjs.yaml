@@ -54,29 +54,21 @@ jobs:
           cache: "pnpm"
           cache-dependency-path: ./package-lock.json
 
-      - name: 환경 변수 설정 및 확인
+      - name: 환경 변수 디버그 정보 출력
         run: |
-          # 개인 키의 줄바꿈 문자를 실제 줄바꿈으로 변환
-          PRIVATE_KEY_WITH_NEWLINES=$(echo "${{ secrets.GOOGLE_SHEETS_PRIVATE_KEY }}" | sed 's/\\n/\n/g')
-          
-          # .env 파일에 환경 변수 쓰기
-          echo "GOOGLE_SHEETS_CLIENT_EMAIL=${{ secrets.GOOGLE_SHEETS_CLIENT_EMAIL }}" > .env
-          echo "GOOGLE_SHEETS_PRIVATE_KEY=\"$PRIVATE_KEY_WITH_NEWLINES\"" >> .env
-          echo "GOOGLE_SHEETS_SPREADSHEET_ID=${{ secrets.GOOGLE_SHEETS_SPREADSHEET_ID }}" >> .env
-          
-          # 환경 변수 확인을 위한 디버그 로그
-          echo "===== 환경 변수 확인 ====="
-          echo "CLIENT_EMAIL: ${{ secrets.GOOGLE_SHEETS_CLIENT_EMAIL }}"
-          echo "SPREADSHEET_ID: ${{ secrets.GOOGLE_SHEETS_SPREADSHEET_ID }}"
-          echo "PRIVATE_KEY 길이: ${#PRIVATE_KEY_WITH_NEWLINES}"
-          echo "===== .env 파일 내용 (처음 100자) ====="
-          head -c 100 .env
-          echo "..."
+          echo "===== 환경 변수 정보 (보안상 값은 표시되지 않음) ====="
+          echo "CLIENT_EMAIL: ${GOOGLE_SHEETS_CLIENT_EMAIL:+설정됨 (길이: ${#GOOGLE_SHEETS_CLIENT_EMAIL})}"
+          echo "SPREADSHEET_ID: ${GOOGLE_SHEETS_SPREADSHEET_ID:+설정됨 (길이: ${#GOOGLE_SHEETS_SPREADSHEET_ID})}"
+          echo "PRIVATE_KEY: ${GOOGLE_SHEETS_PRIVATE_KEY:+설정됨 (길이: ${#GOOGLE_SHEETS_PRIVATE_KEY})}"
+          echo "===== .env 파일 정보 ====="
+          echo "파일 크기: $(wc -c < .env) 바이트"
+          echo "처음 50자: $(head -c 50 .env)..."
+          echo "마지막 50자: ...$(tail -c 50 .env)"
           echo "========================="
         env:
           GOOGLE_SHEETS_CLIENT_EMAIL: ${{ secrets.GOOGLE_SHEETS_CLIENT_EMAIL }}
           GOOGLE_SHEETS_PRIVATE_KEY: ${{ secrets.GOOGLE_SHEETS_PRIVATE_KEY }}
-          GOOGLE_SHEETS_SPREADSHEET_ID: ${{ secrets.GOOGLE_SHEETS_SPREADSHEET_ID }}  
+          GOOGLE_SHEETS_SPREADSHEET_ID: ${{ secrets.GOOGLE_SHEETS_SPREADSHEET_ID }} 
 
       - name: Install dependencies
         run: |
