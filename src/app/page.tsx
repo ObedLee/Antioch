@@ -125,21 +125,83 @@ export default function Home() {
     }
   };
 
-  const getApiBaseUrl = () => {
-    // 환경 변수에서 API 기본 URL 사용
-    if (process.env.NEXT_PUBLIC_API_BASE_URL) {
-      return process.env.NEXT_PUBLIC_API_BASE_URL;
+  // 클라이언트 사이드에서 Google Sheets API를 직접 호출하는 함수
+  const checkPhoneInSheet = async (phone: string) => {
+    try {
+      // Google Sheets API 클라이언트 라이브러리 로드
+      await new Promise((resolve) => {
+        const script = document.createElement('script');
+        script.src = 'https://apis.google.com/js/api.js';
+        script.onload = resolve;
+        document.body.appendChild(script);
+      });
+
+      // Google API 클라이언트 초기화
+      await new Promise((resolve, reject) => {
+        // @ts-ignore
+        gapi.load('client', { callback: resolve, onerror: reject });
+      });
+
+      // API 키와 클라이언트 ID 설정
+      const API_KEY = process.env.NEXT_PUBLIC_GOOGLE_API_KEY;
+      const CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+      const SPREADSHEET_ID = process.env.NEXT_PUBLIC_GOOGLE_SHEET_ID;
+      const SHEET_NAME = 'Sheet1';
+
+      if (!API_KEY || !CLIENT_ID || !SPREADSHEET_ID) {
+        throw new Error('API 설정이 올바르지 않습니다.');
+      }
+
+      // Google API 클라이언트 초기화
+      // @ts-ignore
+      await gapi.client.init({
+        apiKey: API_KEY,
+        clientId: CLIENT_ID,
+        discoveryDocs: ['https://sheets.googleapis.com/$discovery/rest?version=v4'],
+        scope: 'https://www.googleapis.com/auth/spreadsheets.readonly',
+      });
+
+      // 시트 데이터 가져오기
+      // @ts-ignore
+      const response = await gapi.client.sheets.spreadsheets.values.get({
+        spreadsheetId: SPREADSHEET_ID,
+        range: `${SHEET_NAME}!A:D`, // A: 이름, B: 휴대폰번호, C: 출생년도, D: 교회
+      });
+
+      const rows = response.result.values;
+      if (!rows || rows.length === 0) {
+        return null;
+      }
+
+      // 헤더 행 제거
+      const headers = rows[0];
+      const data = rows.slice(1);
+
+      // 휴대폰 번호로 검색
+      const phoneIndex = headers.indexOf('휴대폰번호');
+      if (phoneIndex === -1) return null;
+
+      const nameIndex = headers.indexOf('이름');
+      const birthYearIndex = headers.indexOf('출생년도');
+      const churchIndex = headers.indexOf('교회');
+
+      const foundRow = data.find(row => {
+        const rowPhone = row[phoneIndex]?.toString().trim() || '';
+        return rowPhone === phone.trim();
+      });
+
+      if (!foundRow) return null;
+
+      return {
+        name: foundRow[nameIndex] || '',
+        phone: foundRow[phoneIndex] || '',
+        birthYear: foundRow[birthYearIndex] || '',
+        church: foundRow[churchIndex] || '',
+      };
+    } catch (error) {
+      console.error('Google Sheets API 오류:', error);
+      throw error;
     }
-    
-    // 개발 환경에서는 상대 경로 사용
-    if (process.env.NODE_ENV === 'development') {
-      return '/api';
-    }
-    
-    // 프로덕션 환경에서의 기본 경로
-    // GitHub Pages는 서버 사이드 API를 지원하지 않으므로, 별도의 API 서버가 필요합니다.
-    // 아래 주소를 실제 API 서버 주소로 변경해주세요.
-    return 'https://obedlee.github.io/Antioch/api';
   };
 
   const handleCheckPhone = async () => {
@@ -153,32 +215,18 @@ export default function Home() {
 
     setIsChecking(true);
     try {
-      const apiUrl = `${getApiBaseUrl()}/check`;
-      console.log('API 요청 URL:', apiUrl);
+      console.log('전화번호 확인 요청:', formData.phone);
       
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ phone: formData.phone }),
-        credentials: 'same-origin', // 쿠키가 필요한 경우
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const result = await response.json();
-      console.log('API 응답:', result);
-
-      if (result.success && result.exists) {
+      // 클라이언트 사이드에서 직접 Google Sheets API 호출
+      const existingData = await checkPhoneInSheet(formData.phone);
+      
+      if (existingData) {
         // 기존 데이터로 폼 채우기
         setFormData({
-          name: result.data.name || '',
-          phone: result.data.phone || '',
-          birthYear: result.data.birthYear || '',
-          church: result.data.church || '',
+          name: existingData.name || '',
+          phone: existingData.phone || '',
+          birthYear: existingData.birthYear || '',
+          church: existingData.church || '',
         });
         setIsEditMode(true);
         setSubmitStatus({
@@ -192,6 +240,7 @@ export default function Home() {
         });
       }
     } catch (error) {
+      console.error('전화번호 확인 오류:', error);
       setSubmitStatus({
         success: false,
         message: '조회 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.'
