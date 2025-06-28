@@ -23,7 +23,7 @@ const nextConfig = {
       return [
         {
           source: '/api/:path*',
-          destination: 'https://your-api-server.com/api/:path*', // 실제 API 서버 주소로 변경 필요
+          destination: 'https://github.com/ObedLee/Antioch/api/:path*', // 실제 API 서버 주소로 변경 필요
         },
       ];
     }
@@ -39,7 +39,7 @@ const nextConfig = {
     
     // 클라이언트 측에서 사용할 환경 변수
     NEXT_PUBLIC_API_BASE_URL: isProd 
-      ? `https://your-api-server.com/api` 
+      ? `https://github.com/ObedLee/Antioch/api` 
       : '/api',
   },
 };
