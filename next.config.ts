@@ -36,6 +36,8 @@ const nextConfig = {
     // 서버/클라이언트 모두에서 사용할 환경 변수
     GOOGLE_SHEETS_SPREADSHEET_ID: process.env.GOOGLE_SHEETS_SPREADSHEET_ID,
     GOOGLE_API_KEY: process.env.GOOGLE_API_KEY,
+    GOOGLE_SHEETS_CLIENT_EMAIL: process.env.GOOGLE_SHEETS_CLIENT_EMAIL,
+    GOOGLE_SHEETS_PRIVATE_KEY: process.env.GOOGLE_SHEETS_PRIVATE_KEY?.replace(/\\n/g, '\n'),
     
     // 클라이언트 측에서 사용할 환경 변수
     NEXT_PUBLIC_API_BASE_URL: isProd 
