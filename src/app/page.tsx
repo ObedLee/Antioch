@@ -140,13 +140,16 @@ export default function Home() {
     try {
       console.log('전화번호 확인 요청 (서버사이드 API 호출)');
       
+      const requestBody = { phoneNumber: phone };
+      console.log('Sending request to /api/check with body:', JSON.stringify(requestBody, null, 2));
+      
       // 클라이언트 사이드에서 서버 API 호출
       const response = await fetch('/api/check', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ phone }),
+        body: JSON.stringify(requestBody),
       });
 
       if (!response.ok) {
@@ -156,8 +159,9 @@ export default function Home() {
       }
 
       const result = await response.json();
+      console.log('API 응답:', result);
       
-      if (result.success && result.exists) {
+      if (result.success && result.data) {
         console.log('사용자 데이터 조회 성공');
         return {
           name: result.data.name || '',
