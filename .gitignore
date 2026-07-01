@@ -1,0 +1,17 @@
+# dependencies
+node_modules/
+
+# next.js
+.next/
+out/
+
+# vercel
+.vercel
+
+# env
+.env*
+
+# misc
+download-source.ps1
+.firebase/
+import-utils/firebase-service-account.json

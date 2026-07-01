@@ -1,0 +1,6 @@
+# Firebase 데이터 가져오기 스크립트용 Python 패키지
+# 설치 명령: pip install -r requirements-import.txt
+
+firebase-admin>=6.2.0
+pandas>=2.0.0
+openpyxl>=3.1.0

@@ -1,0 +1,14 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 임시 디버깅용 - 모든 접근 허용 (개발 환경에서만 사용)
+    match /{document=**} {
+      allow read, write: if true;
+    }
+    
+    // 원래 규칙 (나중에 복원할 것)
+    // match /{document=**} {
+    //   allow read, write: if request.auth != null;
+    // }
+  }
+}
