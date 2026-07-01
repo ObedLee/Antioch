@@ -74,13 +74,6 @@ export default function LoginPage() {
           // 단일 리다이렉트 전략으로 변경 (중복 방지)
           router.replace(from);
           
-          // 백업 리다이렉트 (더 긴 지연시간으로 설정)
-          setTimeout(() => {
-            if (window.location.pathname === '/login') {
-              console.log('[LoginPage] 백업 리다이렉트 실행');
-              window.location.href = from;
-            }
-          }, 1000);
         } else {
           console.log('[LoginPage] 이미 대상 경로에 있음, 리디렉트 건너뛰');
           redirectInProgress = false;
@@ -138,14 +131,7 @@ export default function LoginPage() {
         duration: 2000
       });
       
-      // 로그인 성공 시 상태 업데이트 후 useEffect에서 리다이렉트 처리
-      // 추가 대기 시간을 두어 인증 상태 동기화 보장
-      setTimeout(() => {
-        // 리다이렉트가 실패할 경우를 대비한 강제 새로고침
-        const searchParams = new URLSearchParams(window.location.search);
-        const from = searchParams.get('from') || '/dashboard';
-        window.location.href = from;
-      }, 1000);
+      // useEffect에서 리다이렉트 처리됨
       
     } catch (error: any) {
       toast.dismiss(loadingToast);
@@ -197,12 +183,7 @@ export default function LoginPage() {
         position: 'top-center',
       });
       
-      // 구글 로그인 성공 시 강제 리다이렉트
-      setTimeout(() => {
-        const searchParams = new URLSearchParams(window.location.search);
-        const from = searchParams.get('from') || '/dashboard';
-        window.location.href = from;
-      }, 1000);
+      // useEffect에서 리다이렉트 처리됨
       
     } catch (error: any) {
       toast.dismiss(loadingToast);

@@ -201,14 +201,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(user);
       setLoading(false);
       
-      // 모바일 브라우저에서 로그인 성공 시 세션 토큰 설정
-      if (user && (getBrowserInfo().isKakaoTalk || getBrowserInfo().isMobile)) {
+      // 로그인 상태일 때 세션 쿠키 동기화 (미들웨어와 클라이언트 상태 일치)
+      if (user) {
         try {
-          if (IS_DEV) console.log('[AuthContext] 모바일 로그인 감지, 세션 토큰 설정 시도');
+          if (IS_DEV) console.log('[AuthContext] 세션 토큰 동기화 시도');
           await setSessionToken(user);
-          if (IS_DEV) console.log('[AuthContext] 모바일 로그인 세션 설정 완료');
+          if (IS_DEV) console.log('[AuthContext] 세션 토큰 동기화 완료');
         } catch (error) {
-          if (IS_DEV) console.error('[AuthContext] 모바일 로그인 세션 설정 실패:', error);
+          if (IS_DEV) console.error('[AuthContext] 세션 토큰 동기화 실패:', error);
         }
       }
       
