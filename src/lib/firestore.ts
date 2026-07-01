@@ -21,6 +21,20 @@ import { db } from './firebase';
 
 export const VEHICLES_COLLECTION = 'vehicles';
 export const FRUITS_COLLECTION = 'fruits';
+export const ALLOWED_EMAILS_COLLECTION = 'allowedEmails';
+
+// 허용된 이메일인지 확인
+export async function isAllowedEmail(email: string): Promise<boolean> {
+  if (!db || !email) return false;
+  try {
+    const docRef = doc(db, ALLOWED_EMAILS_COLLECTION, email);
+    const docSnap = await getDoc(docRef);
+    return docSnap.exists();
+  } catch (error) {
+    console.error('[Firestore] 이메일 권한 확인 오류:', error);
+    return false;
+  }
+}
 
 type WithId<T> = T & { id: string };
 

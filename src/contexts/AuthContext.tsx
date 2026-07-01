@@ -17,6 +17,7 @@ import {
   inMemoryPersistence
 } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
+import { isAllowedEmail } from '@/lib/firestore';
 import { toast } from 'react-hot-toast';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 
@@ -254,6 +255,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw new Error('사용자 정보를 가져오지 못했습니다.');
       }
       
+      // 허용된 이메일인지 확인
+      const allowed = await isAllowedEmail(userCredential.user.email || '');
+      if (!allowed) {
+        if (IS_DEV) console.log('[Email Login] 허용되지 않은 이메일:', userCredential.user.email);
+        await firebaseSignOut(auth);
+        const errorMsg = '로그인 권한이 없는 계정입니다. 관리자에게 문의하세요.';
+        toast.error(errorMsg);
+        return { success: false, error: errorMsg };
+      }
+      
       if (IS_DEV) console.log('[Email Login] 이메일 로그인 성공:', userCredential.user.email);
       
       // 세션 토큰 설정
@@ -262,7 +273,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (IS_DEV) console.log('[Email Login] 세션 토큰 설정 완료');
       } catch (sessionError) {
         if (IS_DEV) console.error('[Email Login] 세션 토큰 설정 실패:', sessionError);
-        // 세션 설정 실패해도 로그인은 성공으로 처리 (상태는 onAuthStateChanged에서 업데이트됨)
       }
       
       return { success: true };
@@ -325,6 +335,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         
         if (!result?.user) {
           throw new Error('구글 로그인에 실패했습니다.');
+        }
+        
+        // 허용된 이메일인지 확인
+        const allowed = await isAllowedEmail(result.user.email || '');
+        if (!allowed) {
+          if (IS_DEV) console.log('[Google Login] 허용되지 않은 이메일:', result.user.email);
+          await firebaseSignOut(auth);
+          const errorMsg = '로그인 권한이 없는 계정입니다. 관리자에게 문의하세요.';
+          toast.error(errorMsg);
+          return { success: false, error: errorMsg };
         }
         
         // 팝업 로그인 성공 시 세션 토큰 설정
