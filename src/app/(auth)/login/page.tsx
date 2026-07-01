@@ -124,14 +124,12 @@ export default function LoginPage() {
         return;
       }
       
-      // 로그인 성공 시 로딩 토스트만 제거 (성공 메시지는 AuthContext에서 처리)
       toast.dismiss(loadingToast);
-      toast.success('로그인 성공! 잠시만 기다려주세요...', {
-        position: 'top-center',
-        duration: 2000
-      });
       
-      // useEffect에서 리다이렉트 처리됨
+      // 세션 쿠키가 설정된 후 하드 리다이렉트 (미들웨어가 새 쿠키를 인식하도록)
+      const searchParams = new URLSearchParams(window.location.search);
+      const from = searchParams.get('from') || '/dashboard';
+      window.location.href = from;
       
     } catch (error: any) {
       toast.dismiss(loadingToast);
@@ -177,13 +175,12 @@ export default function LoginPage() {
         return;
       }
       
-      toast.success('구글 로그인 성공! 잠시만 기다려주세요...', {
-        id: loadingToast,
-        duration: 2000,
-        position: 'top-center',
-      });
+      toast.dismiss(loadingToast);
       
-      // useEffect에서 리다이렉트 처리됨
+      // 세션 쿠키가 설정된 후 하드 리다이렉트
+      const searchParams = new URLSearchParams(window.location.search);
+      const from = searchParams.get('from') || '/dashboard';
+      window.location.href = from;
       
     } catch (error: any) {
       toast.dismiss(loadingToast);
