@@ -41,20 +41,6 @@ const nextConfig = {
       },
     ]
   },
-  
-  // PWA 지원을 위한 설정
-  async rewrites() {
-    return [
-      {
-        source: '/sw.js',
-        destination: '/sw.js'
-      },
-      {
-        source: '/manifest.json',
-        destination: '/manifest.json'
-      }
-    ]
-  },
 }
 
 module.exports = nextConfig

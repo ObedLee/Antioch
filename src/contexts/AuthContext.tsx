@@ -317,51 +317,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       let result;
       
-      // 리다이렉트 브라우저 또는 저장소 문제가 있는 경우 리다이렉트 방식 사용
-      if (isRedirectBrowser) {
-        if (IS_DEV) console.log('[Google Login] 리다이렉트 방식 사용');
+      // 데스크톱/모바일 모두 팝업 방식 우선 시도 (오류 시 리다이렉트로 폴백)
+      if (IS_DEV) console.log('[Google Login] 팝업 방식 시도');
+      
+      try {
+        result = await signInWithPopup(auth, provider);
         
-        const { signInWithRedirect } = await import('firebase/auth');
-        
-        // 리다이렉트 시작 (결과는 AuthContext에서 처리)
-        if (IS_DEV) console.log('[Google Login] 리다이렉트 시작');
-        await signInWithRedirect(auth, provider);
-        
-        // 리다이렉트가 시작되면 이 함수는 여기서 종료
-        return { success: true };
-      } else {
-        // 데스크톱에서는 팝업 방식 (오류 시 리다이렉트로 폴백)
-        if (IS_DEV) console.log('[Google Login] 팝업 방식 사용');
-        
-        try {
-          result = await signInWithPopup(auth, provider);
-          
-          if (!result?.user) {
-            throw new Error('구글 로그인에 실패했습니다.');
-          }
-          
-          // 팝업 로그인의 경우에만 여기서 세션 토큰 설정
-          await setSessionToken(result.user);
-          
-        } catch (popupError: any) {
-          // 팝업 차단, COOP 오류, 또는 저장소 문제 시 리다이렉트로 폴백
-          if (
-            popupError.code === 'auth/popup-blocked' ||
-            popupError.code === 'auth/popup-closed-by-user' ||
-            popupError.code === 'auth/cancelled-popup-request' ||
-            popupError.message?.includes('Cross-Origin-Opener-Policy') ||
-            popupError.message?.includes('indexedDB')
-          ) {
-            if (IS_DEV) console.log('[Google Login] 팝업 오류, 리다이렉트로 폴백:', popupError.code);
-            
-            const { signInWithRedirect } = await import('firebase/auth');
-            await signInWithRedirect(auth, provider);
-            return { success: true };
-          }
-          
-          // 기타 오류는 다시 던지기
-          throw popupError;
+        if (!result?.user) {
+          throw new Error('구글 로그인에 실패했습니다.');
         }
+        
+        // 팝업 로그인 성공 시 세션 토큰 설정
+        await setSessionToken(result.user);
+        
+      } catch (popupError: any) {
+        if (IS_DEV) console.log('[Google Login] 팝업 오류:', popupError.code, popupError.message);
+        
+        // 팝업 차단, COOP 오류, 사용자 취소, 저장소 문제 시 리다이렉트로 폴백
+        if (
+          popupError.code === 'auth/popup-blocked' ||
+          popupError.code === 'auth/cancelled-popup-request' ||
+          popupError.code === 'auth/internal-error' ||
+          popupError.message?.includes('Cross-Origin-Opener-Policy') ||
+          popupError.message?.includes('indexedDB') ||
+          popupError.message?.includes('null')
+        ) {
+          if (IS_DEV) console.log('[Google Login] 리다이렉트로 폴백');
+          
+          const { signInWithRedirect } = await import('firebase/auth');
+          await signInWithRedirect(auth, provider);
+          return { success: true };
+        }
+        
+        // 사용자가 팝업을 닫은 경우 조용히 처리
+        if (popupError.code === 'auth/popup-closed-by-user') {
+          return { success: false, error: '로그인이 취소되었습니다.' };
+        }
+        
+        // 기타 오류는 다시 던지기
+        throw popupError;
       }
 
       if (IS_DEV) console.log('[Google Login] 구글 로그인 성공');
