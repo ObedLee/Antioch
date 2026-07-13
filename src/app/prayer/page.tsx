@@ -160,24 +160,29 @@ export default function PrayerPage() {
 
   const handleSubmit = async () => {
     if (!simpleUser) return;
-    if (selectedScheduleIds.length === 0) {
-      toast.error('최소 하나 이상의 조를 선택해주세요.');
-      return;
-    }
     setIsSubmitting(true);
     const loadingToast = toast.loading('등록 중...', { position: 'top-center' });
     try {
-      await fastingService.upsertRegistration({
-        userName: simpleUser.name,
-        phoneNumber: simpleUser.phoneNumber,
-        region: simpleUser.region,
-        scheduleIds: selectedScheduleIds,
-      });
-      toast.success(
-        existingRegistrationId ? '금식기도 등록이 수정되었습니다.' : '금식기도 등록이 완료되었습니다.',
-        { id: loadingToast, position: 'top-center' }
-      );
-      loadData();
+      if (selectedScheduleIds.length === 0 && existingRegistrationId) {
+        await fastingService.deleteRegistration(existingRegistrationId);
+        setExistingRegistrationId(null);
+        setSelectedScheduleIds([]);
+        toast.success('금식기도 등록이 취소되었습니다.', { id: loadingToast, position: 'top-center' });
+      } else if (selectedScheduleIds.length > 0) {
+        await fastingService.upsertRegistration({
+          userName: simpleUser.name,
+          phoneNumber: simpleUser.phoneNumber,
+          region: simpleUser.region,
+          scheduleIds: selectedScheduleIds,
+        });
+        toast.success(
+          existingRegistrationId ? '금식기도 등록이 수정되었습니다.' : '금식기도 등록이 완료되었습니다.',
+          { id: loadingToast, position: 'top-center' }
+        );
+        loadData();
+      } else {
+        toast.error('최소 하나 이상의 조를 선택해주세요.', { id: loadingToast, position: 'top-center' });
+      }
     } catch (error) {
       console.error('[Prayer] submit error:', error);
       toast.error('등록 중 오류가 발생했습니다.', { id: loadingToast, position: 'top-center' });
@@ -381,10 +386,10 @@ export default function PrayerPage() {
                   </span>
                   <button
                     onClick={handleSubmit}
-                    disabled={isSubmitting || selectedScheduleIds.length === 0}
+                    disabled={isSubmitting || (selectedScheduleIds.length === 0 && !existingRegistrationId)}
                     className="inline-flex items-center px-6 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md shadow-sm hover:bg-blue-700 disabled:opacity-50"
                   >
-                    {isSubmitting ? '등록 중...' : existingRegistrationId ? '수정하기' : '등록하기'}
+                    {isSubmitting ? '처리 중...' : existingRegistrationId ? (selectedScheduleIds.length === 0 ? '등록 취소' : '수정하기') : '등록하기'}
                   </button>
                 </div>
               </div>
