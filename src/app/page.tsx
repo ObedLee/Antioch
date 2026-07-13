@@ -10,7 +10,6 @@ export default function Home() {
   const { user, loading } = useAuth();
   const router = useRouter();
 
-  // If user is already logged in, redirect to dashboard
   useEffect(() => {
     if (loading) return;
     if (user) {
@@ -18,7 +17,6 @@ export default function Home() {
     }
   }, [user, loading, router]);
 
-  // Show loading state while checking auth
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
@@ -27,7 +25,6 @@ export default function Home() {
     );
   }
 
-  // If user is logged in, show loading (will redirect)
   if (user) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
@@ -36,15 +33,14 @@ export default function Home() {
     );
   }
 
-  // Show landing page for non-authenticated users
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <div className="flex flex-col items-center">
           <div className="flex items-center justify-center w-16 h-16 mb-4">
-            <img 
-              src="/images/아이콘.png" 
-              alt="안디옥교회 아이콘" 
+            <img
+              src="/images/아이콘.png"
+              alt="안디옥교회 아이콘"
               className="w-16 h-16 object-contain"
             />
           </div>
@@ -58,26 +54,15 @@ export default function Home() {
 
         <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
           <div className="space-y-4">
-            {/* 차량등록 버튼 */}
+            {/* 내 정보 등록 버튼 */}
             <Link
-              href="/register/vehicle"
+              href="/my"
               className="w-full flex justify-center items-center py-4 px-6 border border-transparent rounded-md shadow-sm text-base font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
             >
               <svg className="w-6 h-6 mr-3" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11C5.84 5 5.28 5.42 5.08 6.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-1.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"/>
               </svg>
-              차량등록
-            </Link>
-
-            {/* 열매등록 버튼 */}
-            <Link
-              href="/register/fruit"
-              className="w-full flex justify-center items-center py-4 px-6 border border-transparent rounded-md shadow-sm text-base font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors"
-            >
-              <svg className="w-6 h-6 mr-3" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-              </svg>
-              열매등록
+              사용자관리
             </Link>
 
             {/* 관리자로그인 버튼 */}
@@ -94,7 +79,7 @@ export default function Home() {
 
           <div className="mt-6">
             <p className="text-center text-sm text-gray-500">
-              차량이나 열매를 등록하시려면 위 버튼을 클릭하세요
+              내 정보를 등록하시려면 위 버튼을 클릭하세요
             </p>
             <p className="text-center text-xs text-gray-400 mt-1">
               관리자는 로그인 후 데이터를 관리할 수 있습니다

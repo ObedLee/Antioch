@@ -80,11 +80,6 @@ export default function VehicleDetailModal({ vehicle, isOpen, onClose, onEdit, o
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium text-blue-600">소속</label>
-                    <p className="mt-1 text-sm text-gray-900">{vehicle.department || '-'}</p>
-                  </div>
-                  
-                  <div>
                     <label className="block text-sm font-medium text-blue-600">예비 연락처</label>
                     <p className="mt-1 text-sm text-gray-900">{vehicle.secondaryPhoneNumber || '-'}</p>
                   </div>

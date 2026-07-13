@@ -22,6 +22,85 @@ import { db } from './firebase';
 export const VEHICLES_COLLECTION = 'vehicles';
 export const FRUITS_COLLECTION = 'fruits';
 export const ALLOWED_EMAILS_COLLECTION = 'allowedEmails';
+export const REGIONS_COLLECTION = 'regions';
+export const SIMPLE_USERS_COLLECTION = 'simpleUsers';
+
+// 지역(소속) 목록 조회
+export async function getRegions(): Promise<string[]> {
+  if (!db) return [];
+  try {
+    const snap = await getDocs(collection(db, REGIONS_COLLECTION));
+    const regions = Array.from(new Set(
+      snap.docs
+        .map(d => {
+          const data = d.data();
+          return data.name as string || data.region as string || d.id;
+        })
+        .filter(Boolean)
+    ));
+    return regions.sort((a, b) => a.localeCompare(b, 'ko'));
+  } catch (error) {
+    console.error('[Firestore] 지역 목록 조회 오류:', error);
+    return [];
+  }
+}
+
+// SimpleUser 프로필 인터페이스
+export interface SimpleUserProfile {
+  id: string;
+  name: string;
+  phoneNumber: string;
+  region: string;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
+// SimpleUser 프로필 서비스
+export const simpleUserService = {
+  async getProfile(name: string, phoneNumber: string): Promise<SimpleUserProfile | null> {
+    if (!db) return null;
+    const q = query(
+      collection(db, SIMPLE_USERS_COLLECTION),
+      where('name', '==', name),
+      where('phoneNumber', '==', phoneNumber)
+    );
+    const snap = await getDocs(q);
+    if (snap.empty) return null;
+    const d = snap.docs[0];
+    return { id: d.id, ...d.data() } as SimpleUserProfile;
+  },
+
+  async createProfile(data: { name: string; phoneNumber: string; region: string }): Promise<SimpleUserProfile | null> {
+    if (!db) return null;
+    const now = Timestamp.now();
+    const docRef = await addDoc(collection(db, SIMPLE_USERS_COLLECTION), {
+      ...data,
+      createdAt: now,
+      updatedAt: now,
+    });
+    return { id: docRef.id, ...data, createdAt: now, updatedAt: now };
+  },
+
+  async updateProfile(id: string, updates: Partial<Omit<SimpleUserProfile, 'id' | 'createdAt'>>): Promise<void> {
+    if (!db) return;
+    const docRef = doc(db, SIMPLE_USERS_COLLECTION, id);
+    await updateDoc(docRef, { ...updates, updatedAt: Timestamp.now() });
+  },
+};
+
+// 지역이 regions 컬렉션에 없으면 추가
+export async function ensureRegion(regionName: string): Promise<void> {
+  if (!db || !regionName) return;
+  try {
+    const q = query(collection(db, REGIONS_COLLECTION), where('name', '==', regionName));
+    const snap = await getDocs(q);
+    if (snap.empty) {
+      await addDoc(collection(db, REGIONS_COLLECTION), { name: regionName, createdAt: Timestamp.now() });
+    }
+  } catch (error) {
+    console.error('[Firestore] 지역 추가 오류:', error);
+  }
+}
 
 // 허용된 이메일인지 확인
 export async function isAllowedEmail(email: string): Promise<boolean> {
@@ -240,8 +319,7 @@ export interface Vehicle {
   secondaryPhoneNumber?: string;
   carType: string;
   carNumber: string;
-  department?: string;
-  position?: string;
+  region?: string;
   notes?: string;
   createdAt: Timestamp;
   updatedAt: Timestamp;
@@ -253,6 +331,7 @@ export interface Fruit {
   id: string;
   영접자: string;        // 필수
   전도자: string;        // 필수
+  전도자전화번호?: string;
   사역자?: string;
   구분: string;         // 필수 (상태)
   만남날짜: string;       // 필수
@@ -261,6 +340,7 @@ export interface Fruit {
   나이?: string;        // 문자열로 변경 ("25세", "30대" 등)
   연락처: string;
   영적상태?: string;    // 비고
+  region?: string;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }

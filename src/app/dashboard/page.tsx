@@ -11,7 +11,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (user) {
-      router.push('/dashboard/vehicles');
+      router.push('/dashboard/users');
     }
   }, [user, router]);
 

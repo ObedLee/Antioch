@@ -43,12 +43,12 @@ export default function DuplicateVehicleDialog({
       });
     }
     
-    if (existingVehicle.department !== newVehicleData.department) {
+    if (existingVehicle.region !== newVehicleData.region) {
       changes.push({
-        field: 'department',
+        field: 'region',
         label: '소속',
-        old: existingVehicle.department || '',
-        new: newVehicleData.department || '',
+        old: existingVehicle.region || '',
+        new: newVehicleData.region || '',
       });
     }
     

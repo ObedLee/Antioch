@@ -7,8 +7,8 @@ import { toast } from 'react-hot-toast';
 import * as XLSX from 'xlsx';
 import { vehicleService, Vehicle } from '@/lib/firestore';
 import { useAuth } from '@/contexts/AuthContext';
-import VehicleDetailModal from '@/components/vehicles/VehicleDetailModal';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import UserDetailModal from '@/components/users/UserDetailModal';
 
 export default function VehiclesPage() {
   const [allVehicles, setAllVehicles] = useState<Vehicle[]>([]); // 검색용 전체 데이터
@@ -18,22 +18,27 @@ export default function VehiclesPage() {
   const [hasMore, setHasMore] = useState(true);
   const [lastDoc, setLastDoc] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
+  const [detailOwner, setDetailOwner] = useState<{ name: string; phone: string } | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const { user } = useAuth();
   const router = useRouter();
 
   const handleViewDetail = (vehicle: Vehicle) => {
-    setSelectedVehicle(vehicle);
+    setDetailOwner({ name: vehicle.ownerName, phone: vehicle.phoneNumber || '' });
     setIsDetailModalOpen(true);
   };
 
   const handleCloseDetail = () => {
-    setSelectedVehicle(null);
+    setDetailOwner(null);
     setIsDetailModalOpen(false);
   };
 
   const handleEdit = (vehicleId: string) => {
+    setIsDetailModalOpen(false);
+    router.push(`/dashboard/vehicles/${vehicleId}/edit`);
+  };
+
+  const handleEditFromDetail = (vehicleId: string) => {
     setIsDetailModalOpen(false);
     router.push(`/dashboard/vehicles/${vehicleId}/edit`);
   };
@@ -80,7 +85,7 @@ export default function VehiclesPage() {
         '연락처': vehicle.phoneNumber || '',
         '차종': vehicle.carType,
         '차량번호': vehicle.carNumber,
-        '소속': vehicle.department || '',
+        '소속': vehicle.region || '',
         '예비연락처': vehicle.secondaryPhoneNumber || '',
         '비고': vehicle.notes || '',
         '등록일': vehicle.createdAt ? new Date(vehicle.createdAt.seconds * 1000).toLocaleDateString('ko-KR') : '',
@@ -331,7 +336,6 @@ export default function VehiclesPage() {
                     <th scope="col" className="w-32 px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
                       차량번호
                     </th>
-                    {/* 모바일에서 숨김 */}
                     <th scope="col" className="hidden md:table-cell w-28 px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
                       소속
                     </th>
@@ -361,9 +365,8 @@ export default function VehiclesPage() {
                       <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
                         {vehicle.carNumber}
                       </td>
-                      {/* 모바일에서 숨김 */}
                       <td className="hidden md:table-cell whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                        {vehicle.department || ''}
+                        {vehicle.region || ''}
                       </td>
                       <td className="hidden md:table-cell whitespace-nowrap px-3 py-4 text-sm text-gray-500">
                         {vehicle.secondaryPhoneNumber || ''}
@@ -432,13 +435,13 @@ export default function VehiclesPage() {
         </div>
       </div>
       
-      {/* 상세보기 모달 */}
-      <VehicleDetailModal
-        vehicle={selectedVehicle}
+      {/* 상세보기 모달 - 사용자 기준 */}
+      <UserDetailModal
+        ownerName={detailOwner?.name || ''}
+        phoneNumber={detailOwner?.phone || ''}
         isOpen={isDetailModalOpen}
         onClose={handleCloseDetail}
-        onEdit={handleEdit}
-        onDelete={handleDelete}
+        onEditVehicle={handleEditFromDetail}
       />
     </div>
   );

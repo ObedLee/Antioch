@@ -88,6 +88,16 @@ export default function DashboardLayout({
               {/* 탭 네비게이션 - 데스크톱에서만 표시 */}
               <div className="hidden md:flex ml-8 items-end h-full">
                 <Link 
+                  href="/dashboard/users"
+                  className={`border-b-2 px-4 h-full flex items-center text-base font-semibold transition-colors ${
+                    pathname.startsWith('/dashboard/users') 
+                      ? 'border-blue-500 text-blue-600 hover:text-blue-800' 
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  사용자관리
+                </Link>
+                <Link 
                   href="/dashboard/vehicles"
                   className={`border-b-2 px-4 h-full flex items-center text-base font-semibold transition-colors ${
                     pathname.startsWith('/dashboard/vehicles') 
@@ -97,25 +107,7 @@ export default function DashboardLayout({
                 >
                   차량관리
                 </Link>
-                <Link 
-                  href="/dashboard/fruits"
-                  className={`border-b-2 px-4 h-full flex items-center text-base font-semibold transition-colors ${
-                    pathname.startsWith('/dashboard/fruits') 
-                      ? 'border-blue-500 text-blue-600 hover:text-blue-800' 
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
-                >
-                  열매관리
-                </Link>
-                {/* 추후 확장을 위한 예시 탭 */}
-                {/* 
-                <Link 
-                  href="/dashboard/other"
-                  className="border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 px-4 h-full flex items-center text-base font-semibold transition-colors"
-                >
-                  다른 데이터
-                </Link>
-                */}
+                {/* 열매관리 탭 - 추후 복원 예정 */}
               </div>
             </div>
             <div className="flex items-center space-x-4">
@@ -219,6 +211,17 @@ export default function DashboardLayout({
         {isFloatingTabOpen && (
           <div className="absolute bottom-16 left-0 bg-white rounded-lg shadow-lg border border-gray-200 py-2 min-w-[120px]">
             <Link 
+              href="/dashboard/users"
+              className={`block px-4 py-2 text-sm font-medium transition-colors ${
+                pathname.startsWith('/dashboard/users') 
+                  ? 'text-blue-600 bg-blue-50' 
+                  : 'text-gray-700 hover:text-blue-600 hover:bg-gray-50'
+              }`}
+              onClick={() => setIsFloatingTabOpen(false)}
+            >
+              사용자관리
+            </Link>
+            <Link 
               href="/dashboard/vehicles"
               className={`block px-4 py-2 text-sm font-medium transition-colors ${
                 pathname.startsWith('/dashboard/vehicles') 
@@ -229,17 +232,7 @@ export default function DashboardLayout({
             >
               차량관리
             </Link>
-            <Link 
-              href="/dashboard/fruits"
-              className={`block px-4 py-2 text-sm font-medium transition-colors ${
-                pathname.startsWith('/dashboard/fruits') 
-                  ? 'text-blue-600 bg-blue-50' 
-                  : 'text-gray-700 hover:text-blue-600 hover:bg-gray-50'
-              }`}
-              onClick={() => setIsFloatingTabOpen(false)}
-            >
-              열매관리
-            </Link>
+            {/* 열매관리 - 추후 복원 예정 */}
           </div>
         )}
         

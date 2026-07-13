@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import { AuthProvider } from '@/contexts/AuthContext';
+import { SimpleAuthProvider } from '@/contexts/SimpleAuthContext';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -16,7 +17,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: '안디옥교회 데이터 관리 시스템',
     description: '안디옥교회 데이터 등록 관리 시스템',
-    url: 'https://antioch-lsgwbuldq-obeds-projects-5f431bff.vercel.app',
+    url: 'https://antioch-db.vercel.app',
     siteName: '안디옥교회 데이터 관리 시스템',
     images: [
       {
@@ -50,7 +51,9 @@ export default function RootLayout({
       </head>
       <body className={inter.className}>
         <AuthProvider>
-          {children}
+          <SimpleAuthProvider>
+            {children}
+          </SimpleAuthProvider>
         </AuthProvider>
       </body>
     </html>

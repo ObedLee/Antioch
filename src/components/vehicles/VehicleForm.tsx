@@ -20,7 +20,6 @@ const vehicleSchema = z.object({
     }),
   carType: z.string().min(1, '차종을 입력해주세요.'),
   carNumber: z.string().min(1, '차량번호를 입력해주세요.'),
-  department: z.string().optional(),
   notes: z.string().optional(),
 });
 
@@ -66,7 +65,6 @@ export default function VehicleForm({
       secondaryPhoneNumber: initialData?.secondaryPhoneNumber || '',
       carType: initialData?.carType || '',
       carNumber: initialData?.carNumber || '',
-      department: initialData?.department || '',
       notes: initialData?.notes || '',
     },
   });
@@ -241,18 +239,6 @@ export default function VehicleForm({
                 {errors.carNumber && isSubmitted && (
                   <p className="mt-1 text-sm text-red-600">{errors.carNumber.message}</p>
                 )}
-              </div>
-
-              <div className="col-span-6 sm:col-span-3">
-                <label htmlFor="department" className="block text-sm font-medium text-gray-700">
-                  소속
-                </label>
-                <input
-                  type="text"
-                  id="department"
-                  {...register('department')}
-                  className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-blue-500 sm:text-sm py-2 px-3"
-                />
               </div>
 
               <div className="col-span-6 sm:col-span-3">
