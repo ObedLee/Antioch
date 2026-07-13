@@ -107,6 +107,16 @@ export default function DashboardLayout({
                 >
                   차량관리
                 </Link>
+                <Link 
+                  href="/dashboard/prayer"
+                  className={`border-b-2 px-4 h-full flex items-center text-base font-semibold transition-colors ${
+                    pathname.startsWith('/dashboard/prayer') 
+                      ? 'border-blue-500 text-blue-600 hover:text-blue-800' 
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  금식기도
+                </Link>
                 {/* 열매관리 탭 - 추후 복원 예정 */}
               </div>
             </div>
@@ -231,6 +241,17 @@ export default function DashboardLayout({
               onClick={() => setIsFloatingTabOpen(false)}
             >
               차량관리
+            </Link>
+            <Link 
+              href="/dashboard/prayer"
+              className={`block px-4 py-2 text-sm font-medium transition-colors ${
+                pathname.startsWith('/dashboard/prayer') 
+                  ? 'text-blue-600 bg-blue-50' 
+                  : 'text-gray-700 hover:text-blue-600 hover:bg-gray-50'
+              }`}
+              onClick={() => setIsFloatingTabOpen(false)}
+            >
+              금식기도
             </Link>
             {/* 열매관리 - 추후 복원 예정 */}
           </div>

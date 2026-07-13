@@ -24,6 +24,8 @@ export const FRUITS_COLLECTION = 'fruits';
 export const ALLOWED_EMAILS_COLLECTION = 'allowedEmails';
 export const REGIONS_COLLECTION = 'regions';
 export const SIMPLE_USERS_COLLECTION = 'simpleUsers';
+export const FASTING_SCHEDULES_COLLECTION = 'fastingSchedules';
+export const FASTING_REGISTRATIONS_COLLECTION = 'fastingRegistrations';
 
 // 지역(소속) 목록 조회
 export async function getRegions(): Promise<string[]> {
@@ -344,3 +346,123 @@ export interface Fruit {
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
+
+// 금식기도 조(일정) 인터페이스
+export interface FastingSchedule {
+  id: string;
+  group: string;       // 조 (예: "1조", "2조")
+  day: string;         // 요일 (예: "월요일", "화요일")
+  meal: string;        // 아침/점심/저녁
+  description?: string; // 비고
+  active: boolean;     // 현재 활성 여부
+  createdAt: Timestamp;
+}
+
+// 금식기도 등록 인터페이스
+export interface FastingRegistration {
+  id: string;
+  userName: string;
+  phoneNumber: string;
+  region?: string;
+  scheduleIds: string[];  // 선택한 조(일정) ID 목록
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
+// 금식기도 서비스
+export const fastingService = {
+  // 모든 활성 조(일정) 조회
+  async getActiveSchedules(): Promise<FastingSchedule[]> {
+    if (!db) return [];
+    try {
+      const q = query(
+        collection(db, FASTING_SCHEDULES_COLLECTION),
+        where('active', '==', true)
+      );
+      const snap = await getDocs(q);
+      return snap.docs.map(d => ({ id: d.id, ...d.data() } as FastingSchedule));
+    } catch (error) {
+      console.error('[Firestore] 금식기도 일정 조회 오류:', error);
+      return [];
+    }
+  },
+
+  // 모든 조(일정) 조회 (관리자용)
+  async getAllSchedules(): Promise<FastingSchedule[]> {
+    if (!db) return [];
+    try {
+      const snap = await getDocs(collection(db, FASTING_SCHEDULES_COLLECTION));
+      return snap.docs.map(d => ({ id: d.id, ...d.data() } as FastingSchedule));
+    } catch (error) {
+      console.error('[Firestore] 금식기도 전체 일정 조회 오류:', error);
+      return [];
+    }
+  },
+
+  // 사용자 등록 조회
+  async getRegistration(userName: string, phoneNumber: string): Promise<FastingRegistration | null> {
+    if (!db) return null;
+    try {
+      const q = query(
+        collection(db, FASTING_REGISTRATIONS_COLLECTION),
+        where('userName', '==', userName),
+        where('phoneNumber', '==', phoneNumber)
+      );
+      const snap = await getDocs(q);
+      if (snap.empty) return null;
+      const d = snap.docs[0];
+      return { id: d.id, ...d.data() } as FastingRegistration;
+    } catch (error) {
+      console.error('[Firestore] 금식기도 등록 조회 오류:', error);
+      return null;
+    }
+  },
+
+  // 등록 생성 또는 업데이트
+  async upsertRegistration(data: {
+    userName: string;
+    phoneNumber: string;
+    region?: string;
+    scheduleIds: string[];
+  }): Promise<string> {
+    if (!db) throw new Error('DB not initialized');
+    const now = Timestamp.now();
+    const existing = await this.getRegistration(data.userName, data.phoneNumber);
+    if (existing) {
+      await updateDoc(doc(db, FASTING_REGISTRATIONS_COLLECTION, existing.id), {
+        scheduleIds: data.scheduleIds,
+        region: data.region || '',
+        updatedAt: now,
+      });
+      return existing.id;
+    } else {
+      const docRef = await addDoc(collection(db, FASTING_REGISTRATIONS_COLLECTION), {
+        userName: data.userName,
+        phoneNumber: data.phoneNumber,
+        region: data.region || '',
+        scheduleIds: data.scheduleIds,
+        createdAt: now,
+        updatedAt: now,
+      });
+      return docRef.id;
+    }
+  },
+
+  // 등록 삭제
+  async deleteRegistration(id: string): Promise<void> {
+    if (!db) return;
+    await deleteDoc(doc(db, FASTING_REGISTRATIONS_COLLECTION, id));
+  },
+
+  // 모든 등록 조회 (관리자용)
+  async getAllRegistrations(): Promise<FastingRegistration[]> {
+    if (!db) return [];
+    try {
+      const snap = await getDocs(collection(db, FASTING_REGISTRATIONS_COLLECTION));
+      return snap.docs.map(d => ({ id: d.id, ...d.data() } as FastingRegistration));
+    } catch (error) {
+      console.error('[Firestore] 금식기도 전체 등록 조회 오류:', error);
+      return [];
+    }
+  },
+};
