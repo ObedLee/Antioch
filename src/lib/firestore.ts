@@ -26,6 +26,7 @@ export const REGIONS_COLLECTION = 'regions';
 export const SIMPLE_USERS_COLLECTION = 'simpleUsers';
 export const FASTING_SCHEDULES_COLLECTION = 'fastingSchedules';
 export const FASTING_REGISTRATIONS_COLLECTION = 'fastingRegistrations';
+export const FASTING_SETTINGS_COLLECTION = 'fastingSettings';
 
 // 지역(소속) 목록 조회
 export async function getRegions(): Promise<string[]> {
@@ -358,6 +359,13 @@ export interface FastingSchedule {
   createdAt: Timestamp;
 }
 
+// 금식기도 전체 설정 인터페이스
+export interface FastingSettings {
+  id: string;
+  maxCapacity: number;  // 조별 최대 인원
+  updatedAt: Timestamp;
+}
+
 // 금식기도 등록 인터페이스
 export interface FastingRegistration {
   id: string;
@@ -463,6 +471,57 @@ export const fastingService = {
     } catch (error) {
       console.error('[Firestore] 금식기도 전체 등록 조회 오류:', error);
       return [];
+    }
+  },
+
+  // 전체 설정 조회
+  async getSettings(): Promise<FastingSettings | null> {
+    if (!db) return null;
+    try {
+      const snap = await getDocs(collection(db, FASTING_SETTINGS_COLLECTION));
+      if (snap.empty) return null;
+      const d = snap.docs[0];
+      return { id: d.id, ...d.data() } as FastingSettings;
+    } catch (error) {
+      console.error('[Firestore] 금식기도 설정 조회 오류:', error);
+      return null;
+    }
+  },
+
+  // 전체 설정 저장 (maxCapacity)
+  async saveSettings(maxCapacity: number): Promise<void> {
+    if (!db) throw new Error('DB not initialized');
+    const now = Timestamp.now();
+    const existing = await this.getSettings();
+    if (existing) {
+      await updateDoc(doc(db, FASTING_SETTINGS_COLLECTION, existing.id), {
+        maxCapacity,
+        updatedAt: now,
+      });
+    } else {
+      await addDoc(collection(db, FASTING_SETTINGS_COLLECTION), {
+        maxCapacity,
+        updatedAt: now,
+      });
+    }
+  },
+
+  // 조별 등록 인원 수 조회
+  async getScheduleCounts(): Promise<Record<string, number>> {
+    if (!db) return {};
+    try {
+      const snap = await getDocs(collection(db, FASTING_REGISTRATIONS_COLLECTION));
+      const counts: Record<string, number> = {};
+      for (const d of snap.docs) {
+        const data = d.data() as FastingRegistration;
+        for (const sid of data.scheduleIds || []) {
+          counts[sid] = (counts[sid] || 0) + 1;
+        }
+      }
+      return counts;
+    } catch (error) {
+      console.error('[Firestore] 금식기도 조별 인원 조회 오류:', error);
+      return {};
     }
   },
 };

@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'react-hot-toast';
 import * as XLSX from 'xlsx';
-import { fastingService, FastingSchedule, FastingRegistration } from '@/lib/firestore';
+import { fastingService, FastingSchedule, FastingRegistration, FastingSettings } from '@/lib/firestore';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 
 export default function PrayerAdminPage() {
@@ -12,13 +12,17 @@ export default function PrayerAdminPage() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterScheduleId, setFilterScheduleId] = useState<string | null>(null);
+  const [maxCapacity, setMaxCapacity] = useState<number>(0);
+  const [capacityInput, setCapacityInput] = useState<string>('');
+  const [savingCapacity, setSavingCapacity] = useState(false);
 
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [allSchedules, allRegs] = await Promise.all([
+      const [allSchedules, allRegs, settings] = await Promise.all([
         fastingService.getAllSchedules(),
         fastingService.getAllRegistrations(),
+        fastingService.getSettings(),
       ]);
       allSchedules.sort((a, b) => {
         const ga = parseInt(a.group) || 0;
@@ -39,6 +43,8 @@ export default function PrayerAdminPage() {
         return bt - at;
       });
       setRegistrations(allRegs);
+      setMaxCapacity(settings?.maxCapacity || 0);
+      setCapacityInput(settings?.maxCapacity ? String(settings.maxCapacity) : '');
     } catch (error) {
       console.error('[Prayer Admin] data load error:', error);
       toast.error('데이터를 불러오는 중 오류가 발생했습니다.');
@@ -102,6 +108,26 @@ export default function PrayerAdminPage() {
     toast.success(`엑셀 파일이 다운로드되었습니다. (총 ${filteredRegistrations.length}건)`);
   };
 
+  const handleSaveCapacity = async () => {
+    const val = parseInt(capacityInput) || 0;
+    if (val <= 0) {
+      toast.error('1 이상의 숫자를 입력해주세요.');
+      return;
+    }
+    setSavingCapacity(true);
+    const loadingToast = toast.loading('저장 중...', { position: 'top-center' });
+    try {
+      await fastingService.saveSettings(val);
+      setMaxCapacity(val);
+      toast.success('조별 최대 인원이 설정되었습니다.', { id: loadingToast, position: 'top-center' });
+    } catch (error) {
+      console.error('[Prayer Admin] save capacity error:', error);
+      toast.error('저장 중 오류가 발생했습니다.', { id: loadingToast, position: 'top-center' });
+    } finally {
+      setSavingCapacity(false);
+    }
+  };
+
   const totalSelections = registrations.reduce((sum, r) => sum + r.scheduleIds.length, 0);
 
   const scheduleCountMap = new Map<string, number>();
@@ -128,6 +154,34 @@ export default function PrayerAdminPage() {
         </p>
       </div>
 
+      {/* 조별 최대 인원 설정 */}
+      <div className="mb-6 bg-white rounded-lg shadow-sm p-4">
+        <h3 className="text-sm font-semibold text-gray-900 mb-3">조별 최대 인원 설정</h3>
+        <div className="flex items-center gap-3">
+          <input
+            type="number"
+            min="1"
+            value={capacityInput}
+            onChange={e => setCapacityInput(e.target.value)}
+            placeholder="예: 5"
+            className="w-32 rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+          />
+          <span className="text-sm text-gray-600">명</span>
+          <button
+            onClick={handleSaveCapacity}
+            disabled={savingCapacity}
+            className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md shadow-sm hover:bg-blue-700 disabled:opacity-50"
+          >
+            {savingCapacity ? '저장 중...' : '저장'}
+          </button>
+          {maxCapacity > 0 && (
+            <span className="text-sm text-gray-500 ml-2">
+              현재 설정: 조당 {maxCapacity}명
+            </span>
+          )}
+        </div>
+      </div>
+
       {/* 조별 현황 */}
       {schedules.length > 0 && (
         <div className="mb-6 bg-white rounded-lg shadow-sm p-4">
@@ -151,7 +205,7 @@ export default function PrayerAdminPage() {
                 >
                   <div className={`text-sm font-semibold ${isFiltered ? 'text-white' : 'text-gray-900'}`}>{s.group}</div>
                   <div className={`text-xs ${isFiltered ? 'text-white/80' : 'text-gray-600'}`}>{s.day} · {s.meal}</div>
-                  <div className={`text-lg font-bold mt-1 ${isFiltered ? 'text-white' : 'text-blue-600'}`}>{count}명</div>
+                  <div className={`text-lg font-bold mt-1 ${isFiltered ? 'text-white' : count >= maxCapacity && maxCapacity > 0 ? 'text-red-600' : 'text-blue-600'}`}>{count}명{maxCapacity > 0 && <span className={`text-xs font-normal ${isFiltered ? 'text-white/70' : 'text-gray-400'}`}> / {maxCapacity}명</span>}</div>
                   {!isActive && <div className={`text-xs mt-1 ${isFiltered ? 'text-white/60' : 'text-gray-400'}`}>비활성</div>}
                 </button>
               );

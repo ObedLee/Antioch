@@ -67,7 +67,7 @@ export default function Home() {
 
             {/* 금식기도 등록 버튼 */}
             <Link
-              href="/prayer"
+              href="/my?tab=prayer"
               className="w-full flex justify-center items-center py-4 px-6 border border-transparent rounded-md shadow-sm text-base font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors"
             >
               <svg className="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">

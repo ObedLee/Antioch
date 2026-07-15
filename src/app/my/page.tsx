@@ -2,9 +2,9 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useSimpleAuth } from '@/contexts/SimpleAuthContext';
-import { vehicleService, fruitService, Vehicle, Fruit, simpleUserService, getRegions, ensureRegion } from '@/lib/firestore';
+import { vehicleService, fruitService, Vehicle, Fruit, simpleUserService, getRegions, ensureRegion, fastingService, FastingSchedule } from '@/lib/firestore';
 import { collection, query, where, getDocs, doc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import toast, { Toaster } from 'react-hot-toast';
@@ -21,15 +21,25 @@ const formatPhoneNumber = (value: string): string => {
 export default function MyPage() {
   const { simpleUser, simpleLogin, simpleLogout, isLoading } = useSimpleAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectPath = searchParams.get('redirect');
+  const tabParam = searchParams.get('tab');
 
   const [loginName, setLoginName] = useState('');
   const [loginPhone, setLoginPhone] = useState('');
   const [isLoggingIn, setIsLoggingIn] = useState(false);
 
-  const [activeTab, setActiveTab] = useState<'vehicles'>('vehicles');
+  const [activeTab, setActiveTab] = useState<'vehicles' | 'prayer'>('vehicles');
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [fruits, setFruits] = useState<Fruit[]>([]);
   const [dataLoading, setDataLoading] = useState(false);
+  const [prayerLoading, setPrayerLoading] = useState(false);
+  const [schedules, setSchedules] = useState<FastingSchedule[]>([]);
+  const [selectedScheduleIds, setSelectedScheduleIds] = useState<string[]>([]);
+  const [existingRegistrationId, setExistingRegistrationId] = useState<string | null>(null);
+  const [isSubmittingPrayer, setIsSubmittingPrayer] = useState(false);
+  const [scheduleCounts, setScheduleCounts] = useState<Record<string, number>>({});
+  const [maxCapacity, setMaxCapacity] = useState<number>(0);
   const [showRegionSelect, setShowRegionSelect] = useState(false);
   const [selectedRegion, setSelectedRegion] = useState('');
   const [regions, setRegions] = useState<string[]>([]);
@@ -102,11 +112,58 @@ export default function MyPage() {
     }
   }, [simpleUser]);
 
+  const loadPrayerData = useCallback(async () => {
+    if (!simpleUser) return;
+    setPrayerLoading(true);
+    try {
+      const [activeSchedules, settings, counts] = await Promise.all([
+        fastingService.getActiveSchedules(),
+        fastingService.getSettings(),
+        fastingService.getScheduleCounts(),
+      ]);
+      activeSchedules.sort((a, b) => {
+        const ga = parseInt(a.group) || 0;
+        const gb = parseInt(b.group) || 0;
+        if (ga !== gb) return ga - gb;
+        const dayOrder = ['월요일', '화요일', '수요일', '목요일', '금요일', '토요일', '일요일'];
+        const da = dayOrder.indexOf(a.day);
+        const db = dayOrder.indexOf(b.day);
+        if (da !== db) return da - db;
+        const mealOrder = ['아침', '점심', '저녁'];
+        return mealOrder.indexOf(a.meal) - mealOrder.indexOf(b.meal);
+      });
+      setSchedules(activeSchedules);
+      setMaxCapacity(settings?.maxCapacity || 0);
+      setScheduleCounts(counts);
+
+      const reg = await fastingService.getRegistration(simpleUser.name, simpleUser.phoneNumber);
+      if (reg) {
+        setSelectedScheduleIds(reg.scheduleIds || []);
+        setExistingRegistrationId(reg.id);
+      } else {
+        setSelectedScheduleIds([]);
+        setExistingRegistrationId(null);
+      }
+    } catch (error) {
+      console.error('[MyPage] prayer data load error:', error);
+      toast.error('금식기도 데이터를 불러오는 중 오류가 발생했습니다.');
+    } finally {
+      setPrayerLoading(false);
+    }
+  }, [simpleUser]);
+
   useEffect(() => {
     if (simpleUser && !isLoading) {
       loadData();
+      loadPrayerData();
     }
-  }, [simpleUser, isLoading, loadData]);
+  }, [simpleUser, isLoading, loadData, loadPrayerData]);
+
+  useEffect(() => {
+    if (tabParam === 'prayer') {
+      setActiveTab('prayer');
+    }
+  }, [tabParam]);
 
   useEffect(() => {
     getRegions().then(setRegions);
@@ -128,6 +185,9 @@ export default function MyPage() {
       if (profile && profile.region) {
         simpleLogin(profile.name, profile.phoneNumber, profile.region, profile.id);
         toast.success('로그인되었습니다.');
+        if (redirectPath) {
+          router.push(redirectPath);
+        }
       } else if (profile && !profile.region) {
         setPendingProfile({ name: profile.name, phoneNumber: profile.phoneNumber });
         setShowRegionSelect(true);
@@ -190,6 +250,9 @@ export default function MyPage() {
       setShowRegionSelect(false);
       setPendingProfile(null);
       setSelectedRegion('');
+      if (redirectPath) {
+        router.push(redirectPath);
+      }
     } catch (error) {
       console.error('[MyPage] region submit error:', error);
       toast.error('소속 저장 중 오류가 발생했습니다.', { id: loadingToast, position: 'top-center' });
@@ -344,6 +407,72 @@ export default function MyPage() {
     } catch (error) {
       console.error('[MyPage] fruit delete error:', error);
       toast.error('삭제 중 오류가 발생했습니다.');
+    }
+  };
+
+  const handleToggleSchedule = (scheduleId: string) => {
+    setSelectedScheduleIds(prev =>
+      prev.includes(scheduleId)
+        ? prev.filter(id => id !== scheduleId)
+        : [...prev, scheduleId]
+    );
+  };
+
+  const handleSubmitPrayer = async () => {
+    if (!simpleUser) return;
+    setIsSubmittingPrayer(true);
+    const loadingToast = toast.loading('등록 중...', { position: 'top-center' });
+    try {
+      if (selectedScheduleIds.length === 0 && existingRegistrationId) {
+        await fastingService.deleteRegistration(existingRegistrationId);
+        setExistingRegistrationId(null);
+        setSelectedScheduleIds([]);
+        toast.success('금식기도 등록이 취소되었습니다.', { id: loadingToast, position: 'top-center' });
+      } else if (selectedScheduleIds.length > 0) {
+        // 인원 제한 체크: 이미 등록한 조는 제외하고 새로 추가하는 조만 검사
+        const currentReg = existingRegistrationId
+          ? await fastingService.getRegistration(simpleUser.name, simpleUser.phoneNumber)
+          : null;
+        const prevIds = new Set(currentReg?.scheduleIds || []);
+        const newIds = selectedScheduleIds.filter(id => !prevIds.has(id));
+
+        if (maxCapacity > 0) {
+          const fullSchedules: string[] = [];
+          for (const sid of newIds) {
+            const schedule = schedules.find(s => s.id === sid);
+            const currentCount = scheduleCounts[sid] || 0;
+            if (currentCount >= maxCapacity) {
+              fullSchedules.push(schedule ? `${schedule.group} ${schedule.day} ${schedule.meal}` : sid);
+            }
+          }
+          if (fullSchedules.length > 0) {
+            toast.error(
+              `다음 조는 이미 인원이 가득 찼습니다:\n${fullSchedules.join(', ')}`,
+              { id: loadingToast, position: 'top-center', duration: 5000 }
+            );
+            return;
+          }
+        }
+
+        await fastingService.upsertRegistration({
+          userName: simpleUser.name,
+          phoneNumber: simpleUser.phoneNumber,
+          region: simpleUser.region,
+          scheduleIds: selectedScheduleIds,
+        });
+        toast.success(
+          existingRegistrationId ? '금식기도 등록이 수정되었습니다.' : '금식기도 등록이 완료되었습니다.',
+          { id: loadingToast, position: 'top-center' }
+        );
+        loadPrayerData();
+      } else {
+        toast.error('최소 하나 이상의 조를 선택해주세요.', { id: loadingToast, position: 'top-center' });
+      }
+    } catch (error) {
+      console.error('[MyPage] prayer submit error:', error);
+      toast.error('등록 중 오류가 발생했습니다.', { id: loadingToast, position: 'top-center' });
+    } finally {
+      setIsSubmittingPrayer(false);
     }
   };
 
@@ -514,96 +643,212 @@ export default function MyPage() {
             {simpleUser.name} · {simpleUser.phoneNumber} · {simpleUser.region || '소속미설정'}
           </div>
 
-          <div className="mb-6">
-            <Link
-              href="/register/vehicle"
-              className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md shadow-sm hover:bg-blue-700"
+          {/* 탭 네비게이션 */}
+          <div className="flex gap-1 mb-6 border-b border-gray-200">
+            <button
+              onClick={() => setActiveTab('vehicles')}
+              className={`px-4 py-2 text-sm font-semibold border-b-2 transition-colors ${
+                activeTab === 'vehicles'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
             >
-              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-              </svg>
-              차량등록
-            </Link>
+              차량 관리
+            </button>
+            <button
+              onClick={() => setActiveTab('prayer')}
+              className={`px-4 py-2 text-sm font-semibold border-b-2 transition-colors ${
+                activeTab === 'prayer'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              금식기도
+            </button>
           </div>
 
-          {dataLoading ? (
-            <div className="flex justify-center py-12">
-              <LoadingSpinner size="md" showVerse={false} />
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {vehicles.length === 0 ? (
-                <div className="text-center py-12 bg-white rounded-lg shadow-sm">
-                  <div className="mx-auto h-12 w-12 rounded-full bg-gray-100 flex items-center justify-center">
-                    <svg className="h-6 w-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                    </svg>
-                  </div>
-                  <h3 className="mt-2 text-sm font-medium text-gray-900">등록된 차량이 없습니다</h3>
-                  <p className="mt-1 text-sm text-gray-500">차량을 등록해주세요.</p>
+          {/* 차량 관리 탭 */}
+          {activeTab === 'vehicles' && (
+            <>
+              <div className="mb-6">
+                <Link
+                  href="/register/vehicle"
+                  className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md shadow-sm hover:bg-blue-700"
+                >
+                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                  </svg>
+                  차량등록
+                </Link>
+              </div>
+
+              {dataLoading ? (
+                <div className="flex justify-center py-12">
+                  <LoadingSpinner size="md" showVerse={false} />
                 </div>
               ) : (
-                vehicles.map(v => (
-                  <div key={v.id} className="bg-white rounded-lg shadow-sm p-5">
-                    {editingVehicle?.id === v.id ? (
-                      <div className="space-y-4">
-                        <h4 className="font-semibold text-gray-900">차량 정보 수정</h4>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">차종</label>
-                            <input type="text" value={vehicleForm.carType} onChange={e => setVehicleForm({ ...vehicleForm, carType: e.target.value })} className="block w-full rounded-md border border-gray-300 sm:text-sm py-2 px-3" />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">차량번호</label>
-                            <input type="text" value={vehicleForm.carNumber} onChange={e => setVehicleForm({ ...vehicleForm, carNumber: e.target.value })} className="block w-full rounded-md border border-gray-300 sm:text-sm py-2 px-3" />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">예비 연락처</label>
-                            <input type="tel" value={vehicleForm.secondaryPhoneNumber} onChange={e => setVehicleForm({ ...vehicleForm, secondaryPhoneNumber: formatPhoneNumber(e.target.value) })} className="block w-full rounded-md border border-gray-300 sm:text-sm py-2 px-3" maxLength={13} />
-                          </div>
-                          <div className="sm:col-span-2">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">비고</label>
-                            <textarea rows={3} value={vehicleForm.notes} onChange={e => setVehicleForm({ ...vehicleForm, notes: e.target.value })} className="block w-full rounded-md border border-gray-300 sm:text-sm py-2 px-3 resize-none" />
-                          </div>
-                        </div>
-                        <div className="flex items-center space-x-3">
-                          <button onClick={handleUpdateVehicle} disabled={isSubmitting} className="text-sm text-blue-600 hover:text-blue-800 disabled:opacity-50">
-                            {isSubmitting ? '저장 중...' : '저장'}
-                          </button>
-                          <button onClick={() => setEditingVehicle(null)} className="text-sm text-gray-500 hover:text-gray-700">
-                            취소
-                          </button>
-                        </div>
+                <div className="space-y-4">
+                  {vehicles.length === 0 ? (
+                    <div className="text-center py-12 bg-white rounded-lg shadow-sm">
+                      <div className="mx-auto h-12 w-12 rounded-full bg-gray-100 flex items-center justify-center">
+                        <svg className="h-6 w-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                        </svg>
                       </div>
-                    ) : (
-                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-3">
-                            <span className="text-lg font-semibold text-gray-900">{v.ownerName}</span>
-                            <span className="text-sm text-gray-500">{v.phoneNumber}</span>
+                      <h3 className="mt-2 text-sm font-medium text-gray-900">등록된 차량이 없습니다</h3>
+                      <p className="mt-1 text-sm text-gray-500">차량을 등록해주세요.</p>
+                    </div>
+                  ) : (
+                    vehicles.map(v => (
+                      <div key={v.id} className="bg-white rounded-lg shadow-sm p-5">
+                        {editingVehicle?.id === v.id ? (
+                          <div className="space-y-4">
+                            <h4 className="font-semibold text-gray-900">차량 정보 수정</h4>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">차종</label>
+                                <input type="text" value={vehicleForm.carType} onChange={e => setVehicleForm({ ...vehicleForm, carType: e.target.value })} className="block w-full rounded-md border border-gray-300 sm:text-sm py-2 px-3" />
+                              </div>
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">차량번호</label>
+                                <input type="text" value={vehicleForm.carNumber} onChange={e => setVehicleForm({ ...vehicleForm, carNumber: e.target.value })} className="block w-full rounded-md border border-gray-300 sm:text-sm py-2 px-3" />
+                              </div>
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">예비 연락처</label>
+                                <input type="tel" value={vehicleForm.secondaryPhoneNumber} onChange={e => setVehicleForm({ ...vehicleForm, secondaryPhoneNumber: formatPhoneNumber(e.target.value) })} className="block w-full rounded-md border border-gray-300 sm:text-sm py-2 px-3" maxLength={13} />
+                              </div>
+                              <div className="sm:col-span-2">
+                                <label className="block text-sm font-medium text-gray-700 mb-1">비고</label>
+                                <textarea rows={3} value={vehicleForm.notes} onChange={e => setVehicleForm({ ...vehicleForm, notes: e.target.value })} className="block w-full rounded-md border border-gray-300 sm:text-sm py-2 px-3 resize-none" />
+                              </div>
+                            </div>
+                            <div className="flex items-center space-x-3">
+                              <button onClick={handleUpdateVehicle} disabled={isSubmitting} className="text-sm text-blue-600 hover:text-blue-800 disabled:opacity-50">
+                                {isSubmitting ? '저장 중...' : '저장'}
+                              </button>
+                              <button onClick={() => setEditingVehicle(null)} className="text-sm text-gray-500 hover:text-gray-700">
+                                취소
+                              </button>
+                            </div>
                           </div>
-                          <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-600">
-                            <span>차종: {v.carType}</span>
-                            <span>차량번호: {v.carNumber}</span>
-                            {v.region && <span>소속: {v.region}</span>}
-                            {v.secondaryPhoneNumber && <span>예비연락처: {v.secondaryPhoneNumber}</span>}
+                        ) : (
+                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-3">
+                                <span className="text-lg font-semibold text-gray-900">{v.ownerName}</span>
+                                <span className="text-sm text-gray-500">{v.phoneNumber}</span>
+                              </div>
+                              <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-600">
+                                <span>차종: {v.carType}</span>
+                                <span>차량번호: {v.carNumber}</span>
+                                {v.region && <span>소속: {v.region}</span>}
+                                {v.secondaryPhoneNumber && <span>예비연락처: {v.secondaryPhoneNumber}</span>}
+                              </div>
+                              {v.notes && <p className="text-sm text-gray-500 mt-1">비고: {v.notes}</p>}
+                            </div>
+                            <div className="flex items-center space-x-3 mt-3 sm:mt-0">
+                              <button onClick={() => startEditVehicle(v)} className="text-sm text-blue-600 hover:text-blue-800">
+                                편집
+                              </button>
+                              <button onClick={() => handleDeleteVehicle(v.id)} className="text-sm text-red-600 hover:text-red-800">
+                                삭제
+                              </button>
+                            </div>
                           </div>
-                          {v.notes && <p className="text-sm text-gray-500 mt-1">비고: {v.notes}</p>}
-                        </div>
-                        <div className="flex items-center space-x-3 mt-3 sm:mt-0">
-                          <button onClick={() => startEditVehicle(v)} className="text-sm text-blue-600 hover:text-blue-800">
-                            편집
-                          </button>
-                          <button onClick={() => handleDeleteVehicle(v.id)} className="text-sm text-red-600 hover:text-red-800">
-                            삭제
-                          </button>
-                        </div>
+                        )}
                       </div>
-                    )}
-                  </div>
-                ))
+                    ))
+                  )}
+                </div>
               )}
-            </div>
+            </>
+          )}
+
+          {/* 금식기도 탭 */}
+          {activeTab === 'prayer' && (
+            <>
+              {prayerLoading ? (
+                <div className="flex justify-center py-12">
+                  <LoadingSpinner size="md" showVerse={false} />
+                </div>
+              ) : schedules.length === 0 ? (
+                <div className="text-center py-12 bg-white rounded-lg shadow-sm">
+                  <h3 className="text-sm font-medium text-gray-900">현재 등록 가능한 금식기도 조가 없습니다</h3>
+                  <p className="mt-1 text-sm text-gray-500">관리자가 조를 추가하면 등록할 수 있습니다.</p>
+                </div>
+              ) : (
+                <>
+                  <div className="mb-6">
+                    <h2 className="text-lg font-semibold text-gray-900 mb-2">참여할 조를 선택하세요</h2>
+                    <p className="text-sm text-gray-600">
+                      여러 조를 선택할 수 있습니다. {existingRegistrationId && '기존 등록을 수정합니다.'}
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                    {schedules.map(schedule => {
+                      const isSelected = selectedScheduleIds.includes(schedule.id);
+                      const count = scheduleCounts[schedule.id] || 0;
+                      const isFull = maxCapacity > 0 && count >= maxCapacity;
+                      const mealColor = schedule.meal === '아침'
+                        ? 'bg-amber-400'
+                        : schedule.meal === '점심'
+                        ? 'bg-orange-400'
+                        : 'bg-indigo-400';
+                      return (
+                        <button
+                          key={schedule.id}
+                          onClick={() => !isFull && handleToggleSchedule(schedule.id)}
+                          disabled={isFull && !isSelected}
+                          className={`relative rounded-xl p-4 text-center transition-all duration-200 ${
+                            isSelected
+                              ? `${mealColor} text-white shadow-lg scale-105`
+                              : isFull
+                              ? 'bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed opacity-60'
+                              : 'bg-white text-gray-700 border border-gray-200 hover:border-gray-300 hover:shadow-sm'
+                          }`}
+                        >
+                          <div className={`text-sm font-bold ${isSelected ? 'text-white' : 'text-gray-900'}`}>
+                            {schedule.group}
+                          </div>
+                          <div className={`text-sm mt-1 ${isSelected ? 'text-white/90' : 'text-gray-600'}`}>
+                            {schedule.day}
+                          </div>
+                          <div className={`text-xs mt-1 ${isSelected ? 'text-white/80' : 'text-gray-500'}`}>
+                            {schedule.meal}
+                          </div>
+                          {schedule.description && (
+                            <div className={`text-xs mt-1 ${isSelected ? 'text-white/70' : 'text-gray-400'}`}>
+                              {schedule.description}
+                            </div>
+                          )}
+                          {maxCapacity > 0 && (
+                            <div className={`text-xs mt-2 font-medium ${isSelected ? 'text-white/90' : isFull ? 'text-red-500' : 'text-blue-600'}`}>
+                              {count}/{maxCapacity}명{isFull && !isSelected ? ' (마감)' : ''}
+                            </div>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <div className="sticky bottom-0 bg-white border-t border-gray-200 py-4 px-4 -mx-4 sm:mx-0 sm:rounded-lg sm:shadow-md mt-6">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600">
+                        {selectedScheduleIds.length}개 조 선택됨
+                      </span>
+                      <button
+                        onClick={handleSubmitPrayer}
+                        disabled={isSubmittingPrayer || (selectedScheduleIds.length === 0 && !existingRegistrationId)}
+                        className="inline-flex items-center px-6 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md shadow-sm hover:bg-blue-700 disabled:opacity-50"
+                      >
+                        {isSubmittingPrayer ? '처리 중...' : existingRegistrationId ? (selectedScheduleIds.length === 0 ? '등록 취소' : '수정하기') : '등록하기'}
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
+            </>
           )}
 
           <div className="mt-8 text-center">
