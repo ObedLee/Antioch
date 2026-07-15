@@ -653,7 +653,7 @@ export default function MyPage() {
                   : 'border-transparent text-gray-500 hover:text-gray-700'
               }`}
             >
-              차량 관리
+              차량관리
             </button>
             <button
               onClick={() => setActiveTab('prayer')}
@@ -790,11 +790,6 @@ export default function MyPage() {
                       const isSelected = selectedScheduleIds.includes(schedule.id);
                       const count = scheduleCounts[schedule.id] || 0;
                       const isFull = maxCapacity > 0 && count >= maxCapacity;
-                      const mealColor = schedule.meal === '아침'
-                        ? 'bg-amber-400'
-                        : schedule.meal === '점심'
-                        ? 'bg-orange-400'
-                        : 'bg-indigo-400';
                       return (
                         <button
                           key={schedule.id}
@@ -802,10 +797,10 @@ export default function MyPage() {
                           disabled={isFull && !isSelected}
                           className={`relative rounded-xl p-4 text-center transition-all duration-200 ${
                             isSelected
-                              ? `${mealColor} text-white shadow-lg scale-105`
+                              ? 'bg-blue-600 text-white shadow-lg scale-105'
                               : isFull
                               ? 'bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed opacity-60'
-                              : 'bg-white text-gray-700 border border-gray-200 hover:border-gray-300 hover:shadow-sm'
+                              : 'bg-blue-50 text-gray-700 border border-blue-200 hover:border-blue-400 hover:shadow-sm'
                           }`}
                         >
                           <div className={`text-sm font-bold ${isSelected ? 'text-white' : 'text-gray-900'}`}>

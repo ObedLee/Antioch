@@ -170,13 +170,13 @@ export default function PrayerAdminPage() {
           <button
             onClick={handleSaveCapacity}
             disabled={savingCapacity}
-            className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md shadow-sm hover:bg-blue-700 disabled:opacity-50"
+            className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md shadow-sm hover:bg-blue-700 disabled:opacity-50 whitespace-nowrap"
           >
             {savingCapacity ? '저장 중...' : '저장'}
           </button>
           {maxCapacity > 0 && (
             <span className="text-sm text-gray-500 ml-2">
-              현재 설정: 조당 {maxCapacity}명
+              현재: 조당 {maxCapacity}명
             </span>
           )}
         </div>
